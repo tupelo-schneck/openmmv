@@ -316,6 +316,7 @@ class MainFrame(wx.Frame):
         self.notebookBallot.AddPage(self.notebookBallotAdvanced, "Advanced")
         sizer_13.Add(self.notebookBallot, 1, wx.EXPAND, 0)
         self.panel_1.SetSizer(sizer_13)
+        sizer_13.SetSizeHints(self.panel_1)
         sizer_4.Add(self.panel_1, 1, wx.EXPAND, 0)
         sizer_5.Add(self.butFirstBallot, 0, 0, 0)
         sizer_5.Add(self.butPrevBallot, 0, 0, 0)
