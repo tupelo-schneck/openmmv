@@ -64,16 +64,16 @@ class Ballot:
     """
     A complete ballot.  Variables include:
     balllotId (int)     - Unique Id number for each ballot.  Used internally only.
-    ballotName (str)    - Can be a name, anonymous number, group, whatever
+    name (str)    - Can be a name, anonymous number, group, whatever
     ballotItems (dict)  - dict of lists of BallotItem instances.  Keyed by rank (int)
     """
     def __init__(self, id, name=""):
-        self.ballotId = id
-        self.ballotName = str(name)
+        self.id = id
+        self.name = str(name)
         self.ballotItems = {}
     
     def __str__(self):
-        return self.ballotName
+        return self.name
     
     def create_nest_list(self):
         """Creates a list of lists of BallotItems, ordered by rank"""
@@ -82,23 +82,37 @@ class Ballot:
         keys.sort()
         for key in keys:
             itemsFinal.append(self.ballotItems[key])
+            
+class Category:
+    """
+    A project category.  Variable include:
+    id (int)    - category id number
+    name (str)  - category name
+    """
+    def __init__(self, id, name=""):
+        self.id = id
+        self.name = str(name)
+    
+    def __str__(self):
+        return self.name
 
 class Election:
     """
-    An election, including functions to run said election.  Varibles include:
-    ballots (dict)     - a dict of Ballot instances, keyed by ballotId
+    An election, including functions to run said election.  Variables include:
+    ballots (dict)     - a dict of Ballot instances, keyed by id
     projects (dict)    - same as above, for projects
     categories (dict)  - same as above, for categories
     totalResources (float)  - total amount of money to be allocated
     quota (float)   - number of votes a project needs to get funded
     roundToNearest (float)  - smallest change in resources we care about
     """
-    ballots = {}    # {ballotId: Ballot instance}
+    ballots = {}    # {id: Ballot instance}
     projects = {}   # {id: Project instance}
-    categories = {} # {id: "category name"}
+    categories = {} # {id: Cateory instance}
     totalResources = 0.0
     quota = 0.0
     roundToNearest = 0.0
+    #results = Some Format I Haven't Decided On Yet
     
     def import_bltp(self, filename):
         # FIXME: this whole function needs error checking stuff.
@@ -115,7 +129,8 @@ class Election:
         line = f.readline().strip()
         while line != "--START PROJECTS--":
             k, v = line.split(" ", 1)
-            self.categories[int(k)] = str(v)
+            c = Category(int(k), str(v))
+            self.categories[int(k)] = c
             print "Catergory %s imported." % self.categories[int(k)]
             line = f.readline().strip()
         
@@ -166,8 +181,8 @@ class Election:
                 b.ballotItems = itemsFinal
                 """
                 b.ballotItems = itemsDict
-                self.ballots[b.ballotId] = b
-                print "Ballot for %s imported." % b.ballotName
+                self.ballots[b.id] = b
+                print "Ballot for %s imported." % b.name
                 ballotId += 1
         f.close()
         print "\nImport of file %s successful!" % filename
@@ -185,8 +200,8 @@ class Election:
                 % (self.totalResources, self.quota * 100, self.roundToNearest))
         print "Saving Categories..."
         for k, v in self.categories.iteritems():
-            f.write("%i %s\n" % (k, v))
-            print "Category %s saved." % v
+            f.write("%i %s\n" % (k, v.name))
+            print "Category %s saved." % v.name
         print "Saving Projects..."
         f.write("--START PROJECTS--\n")
         for p in self.projects.values():
@@ -196,14 +211,14 @@ class Election:
         print "Saving Ballots..."
         f.write("--START BALLOTS--\n")
         for b in self.ballots.values():
-            f.write("%s\n" % b.ballotName)
+            f.write("%s\n" % b.name)
             for rank, items in b.ballotItems.iteritems():
                 for item in items:
                     f.write("%i %i %.2f\n" %
                            (rank, item.projectId + 1.0, item.proposedFunding))
                 rank += 1
             f.write("0\n")
-            print "Ballot %s saved." %  b.ballotName
+            print "Ballot %s saved." %  b.name
         f.write("EOF\n")
         print "Export complete!"
         f.close()
@@ -213,47 +228,33 @@ class Election:
         input = self.pack_ocaml_election()
         output = str(election.product(2,2)) # call ocaml function here
         results = self.unpack_ocaml_election(output)
-        print "You win!"
+        print "You win! %s" % output
     
     def pack_ocaml_election(self):
         """Packs election info into a string to by processed by ocaml"""
         pass
     
-    def unpack_ocaml_eleciton(self):
+    def unpack_ocaml_election(self, output):
         """Unpack election results string returned from ocaml"""
         pass
-    
-    def get_ballot_by_name(self, name):
-        try:
-            b  = [k for k, v in self.ballots.iteritems() if v.ballotName == name][0]
-            return self.ballots[b]
-        except KeyError:
-            return None
-    
-    def get_project_by_name(self, name):
-        try:
-            p  = [k for k, v in self.projects.iteritems() if v.name == name][0]
-            return self.projects[p]
-        except KeyError:
-            return None
             
-    def get_category_by_name(self, name):
+    def get_item_by_name(self, name, itemDict):
+        """Search given itemDict for named item and retrun the instance"""
         try:
-            p  = [k for k, v in self.categories.iteritems() if v.name == name][0]
-            return self.categories[p]
-        except KeyError:
+            if itemDict not in [self.ballots, self.categories, self.projects]:
+                raise TypeError("Supplied dict is not ballots, categories, or projects dict")
+            p  = [k for k, v in itemDict.iteritems() if v.name == name][0]
+            return itemDict[p]
+        except IndexError:
             return None
 
-    def print_ballots(self):
-        if len(self.ballots) == 0:
-            print "No ballots"
+    def list_items_by_name(self, itemDict):
+        """Given a dict of ballots, project, or categories, return list of names"""
+        l = []
+        if itemDict not in [self.ballots, self.categories, self.projects]:
+            raise TypeError("Supplied dict is not ballots, categories, or projects dict")
         else:
-            for ballot in self.ballots.values():
-                print ballot
-                
-    def print_projects(self):
-        if len(self.projects) == 0:
-            print "No projects"
-        else:
-            for project in self.projects.values():
-                print project
+            for item in itemDict.values():
+                l.append(item.name)
+        return l
+        

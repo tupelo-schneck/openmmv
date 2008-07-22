@@ -148,21 +148,6 @@ class BallotListCtrl(wx.ListCtrl,
 
         self.currentItem = 0
 
-
-##    def SetStringItem(self, index, col, data):
-##        if col in range(3):
-##            wx.ListCtrl.SetStringItem(self, index, col, data)
-##        else:
-##            try:
-##                datalen = int(data)
-##            except:
-##                return
-##
-##            wx.ListCtrl.SetStringItem(self, index, col, data)
-##
-##            data = self.GetItem(index, col-3).GetText()
-##            wx.ListCtrl.SetStringItem(self, index, col-3, data[0:datalen])
-
 class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         # begin wxGlade: MainFrame.__init__
