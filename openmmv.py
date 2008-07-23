@@ -147,14 +147,32 @@ class BallotListCtrl(wx.ListCtrl,
             self.SetItemData(index, id)
 
         self.currentItem = 0
+        
+# This is used to capture stdout/stderr from STV.py and send
+# it to a wxPython window.
+
+class Output:
+    """
+    This is used to capture stdout/stderr from the backend and send
+    it to a wxPython window.
+    """
+    def __init__(self, console):
+        self.console = console
+    def write(self, txt):
+        self.console.AppendText(txt)
 
 class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
+        # initialize variables
+        self.election = None
+        self.bltp = None
+        self.needToSave = False
+        
         # begin wxGlade: MainFrame.__init__
         kwds["style"] = wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self.MainNotebook = wx.Notebook(self, -1, style=0)
-        self.MainNotebook_pane_2 = wx.Panel(self.MainNotebook, -1)
+        self.MainNotebook_console = wx.Panel(self.MainNotebook, -1)
         self.MainNotebook_pane_1 = wx.Panel(self.MainNotebook, -1)
         self.panel_1 = wx.ScrolledWindow(self.MainNotebook_pane_1, -1, style=wx.TAB_TRAVERSAL)
         self.notebookBallot = wx.Notebook(self.panel_1, -1, style=0)
@@ -196,6 +214,7 @@ class MainFrame(wx.Frame):
         self.MainFrame_menubar.Append(wxglade_tmp_menu, "&File")
         self.SetMenuBar(self.MainFrame_menubar)
         # Menu Bar end
+        
         self.MainFrame_statusbar = self.CreateStatusBar(1, 0)
         self.label_2 = wx.StaticText(self.MainNotebook_pane_1, -1, "Election Name: ")
         self.txtElectionName = wx.TextCtrl(self.MainNotebook_pane_1, -1, "")
@@ -214,7 +233,7 @@ class MainFrame(wx.Frame):
         self.txtSearch = wx.SearchCtrl(self.MainNotebook_pane_1, -1, style=wx.TE_PROCESS_ENTER)
         self.butNextBallot = wx.Button(self.MainNotebook_pane_1, -1, "Next >")
         self.butLastBallot = wx.Button(self.MainNotebook_pane_1, -1, "Last >>")
-        self.text_ctrl_1 = wx.TextCtrl(self.MainNotebook_pane_2, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+        self.text_ctrl_1 = wx.TextCtrl(self.MainNotebook_console, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
 
         self.__set_properties()
         self.__do_layout()
@@ -235,6 +254,11 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onClickNext, self.butNextBallot)
         self.Bind(wx.EVT_BUTTON, self.onClickLast, self.butLastBallot)
         # end wxGlade
+        
+        # hook up console
+        self.output = Output(self.text_ctrl_1)
+        sys.stdout = self.output
+        sys.stderr = self.output
 
     def __set_properties(self):
         # begin wxGlade: MainFrame.__set_properties
@@ -312,9 +336,9 @@ class MainFrame(wx.Frame):
         sizer_2.Add(sizer_4, 1, wx.EXPAND, 0)
         self.MainNotebook_pane_1.SetSizer(sizer_2)
         sizer_3.Add(self.text_ctrl_1, 1, wx.EXPAND, 0)
-        self.MainNotebook_pane_2.SetSizer(sizer_3)
+        self.MainNotebook_console.SetSizer(sizer_3)
         self.MainNotebook.AddPage(self.MainNotebook_pane_1, "Current Election")
-        self.MainNotebook.AddPage(self.MainNotebook_pane_2, "Console")
+        self.MainNotebook.AddPage(self.MainNotebook_console, "Console")
         sizer_1.Add(self.MainNotebook, 1, wx.EXPAND, 0)
         self.SetSizer(sizer_1)
         sizer_1.Fit(self)
