@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
+import sys, os
 import wx, wx.grid
 import  wx.lib.mixins.listctrl  as  listmix
 import elections
@@ -162,12 +162,7 @@ class Output:
         self.console.AppendText(txt)
 
 class MainFrame(wx.Frame):
-    def __init__(self, *args, **kwds):
-        # initialize variables
-        self.election = None
-        self.bltp = None
-        self.needToSave = False
-        
+    def __init__(self, *args, **kwds):        
         # begin wxGlade: MainFrame.__init__
         kwds["style"] = wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
@@ -233,7 +228,7 @@ class MainFrame(wx.Frame):
         self.txtSearch = wx.SearchCtrl(self.MainNotebook_pane_1, -1, style=wx.TE_PROCESS_ENTER)
         self.butNextBallot = wx.Button(self.MainNotebook_pane_1, -1, "Next >")
         self.butLastBallot = wx.Button(self.MainNotebook_pane_1, -1, "Last >>")
-        self.text_ctrl_1 = wx.TextCtrl(self.MainNotebook_console, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+        self.console = wx.TextCtrl(self.MainNotebook_console, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
 
         self.__set_properties()
         self.__do_layout()
@@ -254,11 +249,6 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onClickNext, self.butNextBallot)
         self.Bind(wx.EVT_BUTTON, self.onClickLast, self.butLastBallot)
         # end wxGlade
-        
-        # hook up console
-        self.output = Output(self.text_ctrl_1)
-        sys.stdout = self.output
-        sys.stderr = self.output
 
     def __set_properties(self):
         # begin wxGlade: MainFrame.__set_properties
@@ -335,7 +325,7 @@ class MainFrame(wx.Frame):
         sizer_4.Add(sizer_5, 0, wx.EXPAND, 0)
         sizer_2.Add(sizer_4, 1, wx.EXPAND, 0)
         self.MainNotebook_pane_1.SetSizer(sizer_2)
-        sizer_3.Add(self.text_ctrl_1, 1, wx.EXPAND, 0)
+        sizer_3.Add(self.console, 1, wx.EXPAND, 0)
         self.MainNotebook_console.SetSizer(sizer_3)
         self.MainNotebook.AddPage(self.MainNotebook_pane_1, "Current Election")
         self.MainNotebook.AddPage(self.MainNotebook_console, "Console")
@@ -345,18 +335,63 @@ class MainFrame(wx.Frame):
         sizer_1.SetSizeHints(self)
         self.Layout()
         # end wxGlade
+        
+        # hook up console
+        self.output = Output(self.console)
+        sys.stdout = self.output
+        sys.stderr = self.output
+        
+        # initialize variables
+        self.election = elections.Election()
+        self.bltp = None
+        self.needToSave = False
+    
+    def AskToSave(self):
+        if self.needToSave == True:
+            dlg = wx.MessageDialog(self,
+                             'Do you want to save the current election?',
+                             'Warning', wx.YES_NO | wx.ICON_INFORMATION)
+            if dlg.ShowModal() == wx.ID_YES:
+                self.OnSaveElection(None)
+            dlg.Destroy()
+        self.needToSave = False
+    
+    def DiscardWarning(self):
+        if self.election != None:
+            dlg = wx.MessageDialog(self,
+                             'Current election will be discarded.  '
+                             'Would you like to continue?',
+                             'Warning', wx.YES_NO | wx.ICON_INFORMATION)
+        if dlg.ShowModal() == wx.ID_NO:
+            dlg.Destroy()
+            return False
+        dlg.Destroy()
+        return True
 
-    def OnNewElection(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `OnNewElection' not implemented!"
-        event.Skip()
+    def OnNewElection(self, event):
+        if self.DiscardWarning() == False:
+            return
+        self.AskToSave()
+        self.election = elections.Election()
+        print "Started new election."
 
-    def OnLoadElection(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `OnLoadElection' not implemented!"
-        event.Skip()
+    def OnLoadElection(self, event):        
+        if self.DiscardWarning() == False:
+            return
+        self.AskToSave()
+        # FIXME: needs error checking.
+        wildcard = "Election Files (*.bltp)|*.bltp|All Files|*.*"
+        dlg = wx.FileDialog(self, "Open Election File",
+                        os.getcwd(), "", wildcard, style=wx.OPEN|wx.CHANGE_DIR)
+        if dlg.ShowModal() != wx.ID_OK:
+            dlg.Destroy()
+            return
+        self.bltp = dlg.GetPath()
+        dlg.Destroy()
+        self.election.import_bltp(self.bltp)
 
     def OnSaveElection(self, event): # wxGlade: MainFrame.<event_handler>
         print "Event handler `OnSaveElection' not implemented!"
-        event.Skip()
 
     def OnRunElection(self, event): # wxGlade: MainFrame.<event_handler>
         print "Event handler `OnRunElection' not implemented!"
