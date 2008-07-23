@@ -60,11 +60,11 @@ class ProjectDialog(wx.Dialog):
         event.Skip()
 
     def onProjCancel(self, event): # wxGlade: ProjectDialog.<event_handler>
-        print "Event handler `onProjCancel' not implemented!"
+        Debug("Event handler `onProjCancel' not implemented!")
         event.Skip()
 
     def onProjOk(self, event): # wxGlade: ProjectDialog.<event_handler>
-        print "Event handler `onProjOk' not implemented!"
+        Debug("Event handler `onProjOk' not implemented!")
         event.Skip()
 
 # end of class ProjectDialog
@@ -109,11 +109,11 @@ class CategoryDialog(wx.Dialog):
         # end wxGlade
 
     def onCatCancel(self, event): # wxGlade: CategoryDialog.<event_handler>
-        print "Event handler `onCatCancel' not implemented"
+        Debug("Event handler `onCatCancel' not implemented")
         event.Skip()
 
     def onCatOk(self, event): # wxGlade: CategoryDialog.<event_handler>
-        print "Event handler `onCatOk' not implemented"
+        Debug("Event handler `onCatOk' not implemented")
         event.Skip()
 
 # end of class CategoryDialog
@@ -212,13 +212,13 @@ class MainFrame(wx.Frame):
         
         self.MainFrame_statusbar = self.CreateStatusBar(1, 0)
         self.label_2 = wx.StaticText(self.MainNotebook_pane_1, -1, "Election Name: ")
-        self.txtElectionName = wx.TextCtrl(self.MainNotebook_pane_1, -1, "")
+        self.txtElectionName = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
         self.label_4 = wx.StaticText(self.MainNotebook_pane_1, -1, "Quota: ")
-        self.txtQuota = wx.TextCtrl(self.MainNotebook_pane_1, -1, "")
+        self.txtQuota = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
         self.label_3 = wx.StaticText(self.MainNotebook_pane_1, -1, "Total Resources: ")
-        self.txtResources = wx.TextCtrl(self.MainNotebook_pane_1, -1, "")
+        self.txtResources = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
         self.label_5 = wx.StaticText(self.MainNotebook_pane_1, -1, "Round to Nearest: ")
-        self.txtRound = wx.TextCtrl(self.MainNotebook_pane_1, -1, "")
+        self.txtRound = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
         self.label_1 = wx.StaticText(self.MainNotebook_pane_1, -1, "Ballot ID of TOTAL - NAME")
         self.treeProjects = wx.TreeCtrl(self.window_1_pane_1, -1, style=wx.TR_HAS_BUTTONS|wx.TR_DEFAULT_STYLE|wx.SUNKEN_BORDER)
         self.listProjects = BallotListCtrl(self.window_1_pane_2, -1, style=wx.LC_REPORT|wx.SUNKEN_BORDER)
@@ -248,7 +248,23 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onClickPrev, self.butPrevBallot)
         self.Bind(wx.EVT_BUTTON, self.onClickNext, self.butNextBallot)
         self.Bind(wx.EVT_BUTTON, self.onClickLast, self.butLastBallot)
+        self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateElectionName, self.txtElectionName)
+        self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateQuota, self.txtQuota)
+        self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateResources, self.txtResources)
+        self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateRound, self.txtRound)
         # end wxGlade
+        
+        # initialize variables
+        self.election = None
+        self.bltp = None
+        self.needToSave = False
+        self.debug = True
+        
+        # hook up console
+        self.output = Output(self.console)
+        sys.stdout = self.output
+        if self.debug:
+            sys.stderr = self.output
 
     def __set_properties(self):
         # begin wxGlade: MainFrame.__set_properties
@@ -263,6 +279,8 @@ class MainFrame(wx.Frame):
         self.gridBallot.SetColLabelValue(0, "Rank")
         self.gridBallot.SetColLabelValue(1, "Project")
         self.gridBallot.SetColLabelValue(2, "Proposed Funding")
+        self.gridBallot.SetColSize(2, 150)
+        self.gridBallot.SetColMinimalWidth(2, 150)
         self.notebookBallotAdvanced.SetScrollRate(10, 10)
         self.panel_1.SetScrollRate(10, 10)
         # end wxGlade
@@ -333,18 +351,9 @@ class MainFrame(wx.Frame):
         self.SetSizer(sizer_1)
         sizer_1.Fit(self)
         sizer_1.SetSizeHints(self)
+        self.SetMinSize((450, 450))
         self.Layout()
         # end wxGlade
-        
-        # hook up console
-        self.output = Output(self.console)
-        sys.stdout = self.output
-        sys.stderr = self.output
-        
-        # initialize variables
-        self.election = elections.Election()
-        self.bltp = None
-        self.needToSave = False
     
     def AskToSave(self):
         if self.needToSave == True:
@@ -391,22 +400,22 @@ class MainFrame(wx.Frame):
         self.election.import_bltp(self.bltp)
 
     def OnSaveElection(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `OnSaveElection' not implemented!"
+        Debug("Event handler `OnSaveElection' not implemented!")
 
     def OnRunElection(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `OnRunElection' not implemented!"
+        Debug("Event handler `OnRunElection' not implemented!")
         event.Skip()
 
     def OnSaveHtml(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `OnSaveHtml' not implemented!"
+        Debug("Event handler `OnSaveHtml' not implemented!")
         event.Skip()
 
     def OnSaveTxt(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `OnSaveTxt' not implemented!"
+        Debug("Event handler `OnSaveTxt' not implemented!")
         event.Skip()
 
     def OnSaveCsv(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `OnSaveCsv' not implemented!"
+        Debug("Event handler `OnSaveCsv' not implemented!")
         event.Skip()
 
     def OnAddCategory(self, event): # wxGlade: MainFrame.<event_handler>
@@ -420,43 +429,58 @@ class MainFrame(wx.Frame):
         event.Skip()
 
     def OnAddBallot(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `OnAddBallot' not implemented!"
+        Debug("Event handler `OnAddBallot' not implemented!")
         event.Skip()
 
     def OnQuit(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `OnQuit' not implemented!"
-        event.Skip()
-
-    def onClick(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `onClick' not implemented!"
+        Debug("Event handler `OnQuit' not implemented!")
         event.Skip()
 
     def onEnter(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `onEnter' not implemented"
+        Debug("Event handler `onEnter' not implemented")
         event.Skip()
 
     def onSearch(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `onSearch' not implemented"
+        Debug("Event handler `onSearch' not implemented")
         event.Skip()
 
     def onClickFirst(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `onClickFirst' not implemented"
+        Debug("Event handler `onClickFirst' not implemented")
         event.Skip()
 
     def onClickPrev(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `onClickPrev' not implemented"
+        Debug("Event handler `onClickPrev' not implemented")
         event.Skip()
 
     def onClickNext(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `onClickNext' not implemented"
+        Debug("Event handler `onClickNext' not implemented")
         event.Skip()
 
     def onClickLast(self, event): # wxGlade: MainFrame.<event_handler>
-        print "Event handler `onClickLast' not implemented"
+        Debug("Event handler `onClickLast' not implemented")
         event.Skip()
+    
+    def onUpdateElectionName(self, event):
+        Debug(event.GetString())
+        #self.txtElectionName
+    
+    def onUpdateQuota(self, event):
+        Debug(event.GetString())
+        #self.txtQuota
+    
+    def onUpdateResources(self, event):
+        Debug(event.GetString())
+        #self.txtResources
+    
+    def onUpdateRound(self, event):
+        Debug(event.GetString())
+        #self.txtRound
 
 # end of class MainFrame
 
+def Debug(msg):
+    if MainFrame.debug == True:
+        print msg
 
 if __name__ == "__main__":
     app = wx.PySimpleApp(0)
