@@ -251,7 +251,11 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateElectionName, self.txtElectionName)
         self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateQuota, self.txtQuota)
         self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateResources, self.txtResources)
-        self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateRound, self.txtRound)
+        self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateRound, self.txtRound)        
+        self.txtElectionName.Bind(wx.EVT_KILL_FOCUS, self.onUpdateElectionName, self.txtElectionName)
+        self.txtQuota.Bind(wx.EVT_KILL_FOCUS, self.onUpdateQuota, self.txtQuota)
+        self.txtResources.Bind(wx.EVT_KILL_FOCUS, self.onUpdateResources, self.txtResources)
+        self.txtRound.Bind(wx.EVT_KILL_FOCUS, self.onUpdateRound, self.txtRound)
         # end wxGlade
         
         # initialize variables
@@ -462,23 +466,39 @@ class MainFrame(wx.Frame):
     
     def onUpdateElectionName(self, event):
         self.CheckForElection()
-        txt = event.GetString()
-        self.election.name = txt
-        self.txtElectionName.SetValue(txt)
-        Debug("new election value: %s" % self.election.name)
+        val = event.GetString()
+        self.election.name = str(val)
+        Debug("new election value: name == %s" % self.election.name)
     
     def onUpdateQuota(self, event):
-        Debug(event.GetString())
-        #self.txtQuota
+        self.CheckForElection()
+        val = self.txtQuota.GetValue()
+        if val in [None, ""]:
+            return
+        try:
+            self.election.quota = float(val)
+            Debug("new election value: quota == %.2f" % self.election.quota)
+        except ValueError:
+            dlg = wx.MessageDialog(self, 
+                "Quota must be a number", "Error", style=wx.OK)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.txtQuota.SetValue("")
+            self.txtQuota.SetFocus()
     
     def onUpdateResources(self, event):
-        Debug(event.GetString())
+        self.CheckForElection()
+        txt = event.GetString()
+        self.election.totalResources = txt
+        Debug("new election value: totalResources = %s" % self.election.totalResources)
         #self.txtResources
     
     def onUpdateRound(self, event):
-        Debug(event.GetString())
-        #self.txtRound
-    
+        self.CheckForElection()
+        txt = event.GetString()
+        self.election.roundToNearest = txt
+        Debug("new election value: roundToNearest = %.2f" % self.election.roundToNearest)
+            
     def CheckForElection(self):
         if self.election == None:
             self.election = elections.Election()
