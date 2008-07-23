@@ -461,8 +461,11 @@ class MainFrame(wx.Frame):
         event.Skip()
     
     def onUpdateElectionName(self, event):
-        Debug(event.GetString())
-        #self.txtElectionName
+        self.CheckForElection()
+        txt = event.GetString()
+        self.election.name = txt
+        self.txtElectionName.SetValue(txt)
+        Debug("new election value: %s" % self.election.name)
     
     def onUpdateQuota(self, event):
         Debug(event.GetString())
@@ -475,6 +478,10 @@ class MainFrame(wx.Frame):
     def onUpdateRound(self, event):
         Debug(event.GetString())
         #self.txtRound
+    
+    def CheckForElection(self):
+        if self.election == None:
+            self.election = elections.Election()
 
 # end of class MainFrame
 

@@ -99,6 +99,7 @@ class Category:
 class Election:
     """
     An election, including functions to run said election.  Variables include:
+    name (str)         - name for this election
     ballots (dict)     - a dict of Ballot instances, keyed by id
     projects (dict)    - same as above, for projects
     categories (dict)  - same as above, for categories
@@ -106,6 +107,7 @@ class Election:
     quota (float)   - number of votes a project needs to get funded
     roundToNearest (float)  - smallest change in resources we care about
     """
+    name = ""
     ballots = {}    # {id: Ballot instance}
     projects = {}   # {id: Project instance}
     categories = {} # {id: Cateory instance}
