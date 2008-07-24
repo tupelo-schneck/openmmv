@@ -119,13 +119,14 @@ class Election:
     def import_bltp(self, filename):
         # FIXME: this whole function needs error checking stuff.
         f = open(filename,"r")
-        # deal with first line (resources, quota percentage, rounding)
+        # deal with first line (resources, quota percentage, rounding, name)
         line1 = f.readline()
-        line = line1.strip().split()
+        line = line1.strip().split(" ", 3)
         self.totalResources = float(line[0])
-        self.quota = float(line[1]) / 100
+        self.quota = float(line[1])
         self.roundToNearest = float(line[2])
-        print "Imported resources, quota, and rounding info."
+        self.name = str(line[3])
+        print "Imported resources, quota, rounding info, and name."
         
         print "Import categories..."
         line = f.readline().strip()
@@ -197,9 +198,9 @@ class Election:
     
     def export_bltp(self, filename):
         f = open(filename,"w")
-        print "Saving resources, quota and rounding info..."
-        f.write("%.2f %.2f %.2f\n"
-                % (self.totalResources, self.quota * 100, self.roundToNearest))
+        print "Saving resources, quota, rounding info, and name..."
+        f.write("%.2f %.2f %.2f %s\n"
+                % (self.totalResources, self.quota, self.roundToNearest, self.name))
         print "Saving Categories..."
         for k, v in self.categories.iteritems():
             f.write("%i %s\n" % (k, v.name))

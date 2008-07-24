@@ -213,7 +213,7 @@ class MainFrame(wx.Frame):
         self.MainFrame_statusbar = self.CreateStatusBar(1, 0)
         self.label_2 = wx.StaticText(self.MainNotebook_pane_1, -1, "Election Name: ")
         self.txtElectionName = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
-        self.label_4 = wx.StaticText(self.MainNotebook_pane_1, -1, "Quota: ")
+        self.label_4 = wx.StaticText(self.MainNotebook_pane_1, -1, "Quota Percent: ")
         self.txtQuota = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
         self.label_3 = wx.StaticText(self.MainNotebook_pane_1, -1, "Total Resources: ")
         self.txtResources = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
@@ -375,10 +375,10 @@ class MainFrame(wx.Frame):
                              'Current election will be discarded.  '
                              'Would you like to continue?',
                              'Warning', wx.YES_NO | wx.ICON_INFORMATION)
-        if dlg.ShowModal() == wx.ID_NO:
+            if dlg.ShowModal() == wx.ID_NO:
+                dlg.Destroy()
+                return False
             dlg.Destroy()
-            return False
-        dlg.Destroy()
         return True
 
     def OnNewElection(self, event):
@@ -391,6 +391,8 @@ class MainFrame(wx.Frame):
     def OnLoadElection(self, event):        
         if self.DiscardWarning() == False:
             return
+        if self.election == None:
+            self.election = elections.Election()
         self.AskToSave()
         # FIXME: needs error checking.
         wildcard = "Election Files (*.bltp)|*.bltp|All Files|*.*"
@@ -402,6 +404,7 @@ class MainFrame(wx.Frame):
         self.bltp = dlg.GetPath()
         dlg.Destroy()
         self.election.import_bltp(self.bltp)
+        self.Populate()
 
     def OnSaveElection(self, event): # wxGlade: MainFrame.<event_handler>
         Debug("Event handler `OnSaveElection' not implemented!")
@@ -465,13 +468,15 @@ class MainFrame(wx.Frame):
         event.Skip()
     
     def onUpdateElectionName(self, event):
-        self.CheckForElection()
-        val = event.GetString()
+        if self.election == None:
+            self.election = elections.Election()
+        val = self.txtElectionName.GetValue()
         self.election.name = str(val)
         Debug("new election value: name == %s" % self.election.name)
     
     def onUpdateQuota(self, event):
-        self.CheckForElection()
+        if self.election == None:
+            self.election = elections.Election()
         val = self.txtQuota.GetValue()
         if val in [None, ""]:
             return
@@ -487,21 +492,47 @@ class MainFrame(wx.Frame):
             self.txtQuota.SetFocus()
     
     def onUpdateResources(self, event):
-        self.CheckForElection()
-        txt = event.GetString()
-        self.election.totalResources = txt
-        Debug("new election value: totalResources = %s" % self.election.totalResources)
-        #self.txtResources
-    
-    def onUpdateRound(self, event):
-        self.CheckForElection()
-        txt = event.GetString()
-        self.election.roundToNearest = txt
-        Debug("new election value: roundToNearest = %.2f" % self.election.roundToNearest)
-            
-    def CheckForElection(self):
         if self.election == None:
             self.election = elections.Election()
+        val = self.txtResources.GetValue()
+        if val in [None, ""]:
+            return
+        try:
+            self.election.totalResources = float(val)
+            Debug("new election value: resources == %.2f" % self.election.totalResources)
+        except ValueError:
+            dlg = wx.MessageDialog(self, 
+                "Resources must be a number", "Error", style=wx.OK)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.txtResources.SetValue("")
+            self.txtResources.SetFocus()
+    
+    def onUpdateRound(self, event):
+        if self.election == None:
+            self.election = elections.Election()
+        self.CheckForElection()
+        val = self.txtRound.GetValue()
+        if val in [None, ""]:
+            return
+        try:
+            self.election.roundToNearest = float(val)
+            Debug("new election value: round == %.2f" % self.election.roundToNearest)
+        except ValueError:
+            dlg = wx.MessageDialog(self, 
+                "Resources must be a number", "Error", style=wx.OK)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.txtRound.SetValue("")
+            self.txtRound.SetFocus()
+    
+    def Populate(self):
+        """Populate gui with data from loaded election"""
+        # FIXME: finsih this!
+        self.txtElectionName.SetValue(str(self.election.name))
+        self.txtQuota.SetValue("%.2f" % self.election.quota)
+        self.txtResources.SetValue("%.2f" % self.election.totalResources)
+        self.txtRound.SetValue("%.2f" % self.election.roundToNearest)
 
 # end of class MainFrame
 
