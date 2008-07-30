@@ -22,14 +22,14 @@ static PyObject* size(PyObject* self, PyObject* args)
 	return Py_BuildValue("i", size);
 }
 
-static PyMethodDef ElectionMethods[] = {
+static PyMethodDef CamlMethods[] = {
     {"product", product, METH_VARARGS, "multiply two integers"},
 	{"size", size, METH_VARARGS, "return tuple size"},
     {NULL, NULL, 0, NULL}
 };
 
 PyMODINIT_FUNC
-initelection(void)
+initcaml(void)
 {
-    (void) Py_InitModule("election", ElectionMethods);
+    (void) Py_InitModule("caml", CamlMethods);
 }
