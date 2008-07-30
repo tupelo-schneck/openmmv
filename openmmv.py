@@ -373,7 +373,11 @@ class MainFrame(wx.Frame):
         dlg.ShowModal()
         name = dlg.GetValue()
         dlg.Destroy()
-        Debug("cateogry: %s" % name)
+        id = len(self.election.categories) + 1
+        self.election.categories[id] = elections.Category(id, name)
+        Debug("added cateogry: %d - %s" % (id, name))
+        b = self.election.ballots[self.currentBallot]
+        self.PopulateBallotSimple(b)
 
     def OnAddProject(self, event):
         dialog = ProjectDialog(self, -1, "")
@@ -485,8 +489,9 @@ class MainFrame(wx.Frame):
             self.txtRound.SetValue("")
             self.txtRound.SetFocus()
             
-    def PopulateBallotAdvanced(self, ballot):
+    def PopulateBallotSimple(self, ballot):
         self.listProjects.DeleteAllItems()
+        self.treeProjects.DeleteAllItems()
         # Fill in availble projects tree
         catIdDict = {}
         root = self.treeProjects.AddRoot("Categories")
@@ -513,7 +518,7 @@ class MainFrame(wx.Frame):
         self.listProjects.SetColumnWidth(1, wx.LIST_AUTOSIZE)
         self.listProjects.SetColumnWidth(2, wx.LIST_AUTOSIZE)
     
-    def PopulateBallotSimple(self, ballot):
+    def PopulateBallotAdvanced(self, ballot):
         self.gridBallot.ClearGrid()
         row = 0
         for id, item in ballot.ballotItems.iteritems():
@@ -525,6 +530,7 @@ class MainFrame(wx.Frame):
         self.gridBallot.AutoSizeColumns()
     
     def PopulateBallot(self, id):
+        Debug("populating ballot id = %d" % id)
         try:
             b = self.election.ballots[id]
             self.PopulateBallotAdvanced(b)
