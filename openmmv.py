@@ -237,6 +237,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onClickPrev, self.butPrevBallot)
         self.Bind(wx.EVT_BUTTON, self.onClickNext, self.butNextBallot)
         self.Bind(wx.EVT_BUTTON, self.onClickLast, self.butLastBallot)
+        self.Bind(wx.EVT_TEXT_ENTER, self.onSearch, self.txtSearch)
         self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateElectionName, self.txtElectionName)
         self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateQuota, self.txtQuota)
         self.Bind(wx.EVT_TEXT_ENTER, self.onUpdateResources, self.txtResources)
@@ -433,34 +434,40 @@ class MainFrame(wx.Frame):
         Debug("Event handler `OnQuit' not implemented!")
         event.Skip()
 
-    def onEnter(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `onEnter' not implemented")
-        event.Skip()
-
-    def onSearch(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `onSearch' not implemented")
-        event.Skip()
+    def onSearch(self, event):
+        name = event.GetString()
+        b = self.election.get_item_by_name(name, self.election.ballots)
+        if b == None:
+            dlg = wx.MessageDialog(self, 
+                'Ballot "%s" not found' % name, "Error", style=wx.OK)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.txtSearch.SetValue("")
+        else:
+            Debug("populate ballot %d - %s" % (b.id+1, b.name))
+            self.PopulateBallot(b.id)
+            self.txtSearch.SetValue("")
 
     def onClickFirst(self, event): # wxGlade: MainFrame.<event_handler>
-        if self.currentBallot == 0:
+        if self.currentBallot in [0, None]:
             pass
         else:
             self.PopulateBallot(0)
 
     def onClickPrev(self, event): # wxGlade: MainFrame.<event_handler>
-        if self.currentBallot == 0:
+        if self.currentBallot in [0, None]:
             pass
         else:
             self.PopulateBallot(self.currentBallot - 1)
 
     def onClickNext(self, event): # wxGlade: MainFrame.<event_handler>
-        if self.currentBallot == len(self.election.ballots) - 1:
+        if self.currentBallot in [None, len(self.election.ballots) - 1]:
             pass
         else:
             self.PopulateBallot(self.currentBallot + 1)
 
     def onClickLast(self, event): # wxGlade: MainFrame.<event_handler>
-        if self.currentBallot == len(self.election.ballots) - 1:
+        if self.currentBallot in [None, len(self.election.ballots) - 1]:
             pass
         else:
             self.PopulateBallot(len(self.election.ballots) - 1)

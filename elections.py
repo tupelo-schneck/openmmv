@@ -246,7 +246,7 @@ class Election:
         try:
             if itemDict not in [self.ballots, self.categories, self.projects]:
                 raise TypeError("Supplied dict is not ballots, categories, or projects dict")
-            p  = [k for k, v in itemDict.iteritems() if v.name == name][0]
+            p  = [k for k, v in itemDict.iteritems() if v.name.lower() == name.lower()][0]
             return itemDict[p]
         except IndexError:
             return None
