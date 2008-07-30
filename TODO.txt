@@ -1,0 +1,7 @@
+TODO:
+
+* hook up all menu events
+* populate
+* make buttons/ballot surfing work
+* drag and drop in advanced ballot view
+* limit ballot editing to funding proposals only

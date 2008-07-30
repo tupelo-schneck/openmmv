@@ -63,7 +63,7 @@ class BallotItem:
 class Ballot:
     """
     A complete ballot.  Variables include:
-    balllotId (int)     - Unique Id number for each ballot.  Used internally only.
+    id (int)     - Unique Id number for each ballot.  Used internally only.
     name (str)    - Can be a name, anonymous number, group, whatever
     ballotItems (dict)  - dict of lists of BallotItem instances.  Keyed by rank (int)
     """

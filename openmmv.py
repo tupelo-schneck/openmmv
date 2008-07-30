@@ -136,17 +136,6 @@ class BallotListCtrl(wx.ListCtrl,
         self.SetColumnWidth(2, wx.LIST_AUTOSIZE)
         
         listmix.TextEditMixin.__init__(self)
-
-    def Populate(self, ballotItems):
-
-        for id, item in ballotItems.iteritems():
-            index = self.InsertStringItem(sys.maxint, str(id))
-            self.SetStringItem(index, 0, str(id))
-            self.SetStringItem(index, 1, str(item.projectId))
-            self.SetStringItem(index, 2, str(item.proposedFunding))
-            self.SetItemData(index, id)
-
-        self.currentItem = 0
         
 # This is used to capture stdout/stderr from STV.py and send
 # it to a wxPython window.
@@ -219,8 +208,8 @@ class MainFrame(wx.Frame):
         self.txtResources = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
         self.label_5 = wx.StaticText(self.MainNotebook_pane_1, -1, "Round to Nearest: ")
         self.txtRound = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
-        self.label_1 = wx.StaticText(self.MainNotebook_pane_1, -1, "Ballot ID of TOTAL - NAME")
-        self.treeProjects = wx.TreeCtrl(self.window_1_pane_1, -1, style=wx.TR_HAS_BUTTONS|wx.TR_DEFAULT_STYLE|wx.SUNKEN_BORDER)
+        self.ballotsHead = wx.StaticText(self.MainNotebook_pane_1, -1, "Ballot ID of TOTAL - NAME")
+        self.treeProjects = wx.TreeCtrl(self.window_1_pane_1, -1, style=wx.TR_HAS_BUTTONS|wx.TR_DEFAULT_STYLE|wx.TR_HIDE_ROOT|wx.SUNKEN_BORDER)
         self.listProjects = BallotListCtrl(self.window_1_pane_2, -1, style=wx.LC_REPORT|wx.SUNKEN_BORDER)
         self.gridBallot = wx.grid.Grid(self.notebookBallotAdvanced, -1, size=(1, 1))
         self.butFirstBallot = wx.Button(self.MainNotebook_pane_1, -1, "<< First")
@@ -323,7 +312,7 @@ class MainFrame(wx.Frame):
         sizer_8.Add(sizer_12, 1, wx.EXPAND, 0)
         sizer_6.Add(sizer_8, 1, wx.EXPAND, 0)
         sizer_4.Add(sizer_6, 0, wx.EXPAND, 0)
-        sizer_4.Add(self.label_1, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
+        sizer_4.Add(self.ballotsHead, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_23.Add(self.treeProjects, 1, wx.EXPAND, 0)
         self.window_1_pane_1.SetSizer(sizer_23)
         sizer_24.Add(self.listProjects, 1, wx.EXPAND, 0)
@@ -525,14 +514,60 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             self.txtRound.SetValue("")
             self.txtRound.SetFocus()
+    def PopulateBallotAdvanced(self, ballot):
+        # Fill in availble projects tree
+        catIdDict = {}
+        root = self.treeProjects.AddRoot("Categories")
+        for k, v in self.election.categories.iteritems():
+            child = self.treeProjects.AppendItem(root, "%s" % v.name)
+            self.treeProjects.SetPyData(child, v)
+            catIdDict[k] = child
+        for k, v in self.election.projects.iteritems():
+            root = catIdDict[v.category]
+            child = self.treeProjects.AppendItem(root, "%s" % v.name)
+            self.treeProjects.SetPyData(child, v)
+        # fill in ballot vote list control
+        for id, item in ballot.ballotItems.iteritems():
+            for v in item:
+                index = self.listProjects.InsertStringItem(sys.maxint, str(id))
+                self.listProjects.SetStringItem(index, 0, str(id))
+                self.listProjects.SetStringItem(index, 1, str(self.election.projects[v.projectId].name))
+                self.listProjects.SetStringItem(index, 2, "%.2f" % v.proposedFunding)
+                self.listProjects.SetItemData(index, id)
+        self.listProjects.currentItem = 0
+        self.listProjects.SetColumnWidth(0, 50)
+        self.listProjects.SetColumnWidth(1, wx.LIST_AUTOSIZE)
+        self.listProjects.SetColumnWidth(2, wx.LIST_AUTOSIZE)
     
+    def PopulateBallotSimple(self, ballot):
+        row = 0
+        for id, item in ballot.ballotItems.iteritems():
+            for v in item:
+                self.gridBallot.SetCellValue(row, 0, str(id))
+                self.gridBallot.SetCellValue(row, 1, str(self.election.projects[v.projectId].name))
+                self.gridBallot.SetCellValue(row, 2, "%.2f" % v.proposedFunding)
+            row += 1
+        self.gridBallot.AutoSizeColumns()
+        
     def Populate(self):
         """Populate gui with data from loaded election"""
-        # FIXME: finsih this!
+        # Load name, quota, resources, rounding
         self.txtElectionName.SetValue(str(self.election.name))
         self.txtQuota.SetValue("%.2f" % self.election.quota)
         self.txtResources.SetValue("%.2f" % self.election.totalResources)
         self.txtRound.SetValue("%.2f" % self.election.roundToNearest)
+        # Load and populate first ballot (default to advanced view)
+        try:
+            b = self.election.ballots[0]
+            self.PopulateBallotAdvanced(b)
+            self.PopulateBallotSimple(b)
+            id = b.id + 1
+            name = b.name
+            total = len(self.election.ballots)
+            self.ballotsHead.SetLabel("Ballot %d of %d - %s" %
+                                    (id, total, name))
+        except KeyError:
+            self.ballotsHead.SetLabel("Ballot 0 of 0")
 
 # end of class MainFrame
 
