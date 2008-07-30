@@ -250,6 +250,7 @@ class MainFrame(wx.Frame):
         # initialize variables
         self.election = None
         self.bltp = None
+        self.currentBallot = None
         self.needToSave = False
         self.debug = True
         
@@ -441,20 +442,28 @@ class MainFrame(wx.Frame):
         event.Skip()
 
     def onClickFirst(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `onClickFirst' not implemented")
-        event.Skip()
+        if self.currentBallot == 0:
+            pass
+        else:
+            self.PopulateBallot(0)
 
     def onClickPrev(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `onClickPrev' not implemented")
-        event.Skip()
+        if self.currentBallot == 0:
+            pass
+        else:
+            self.PopulateBallot(self.currentBallot - 1)
 
     def onClickNext(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `onClickNext' not implemented")
-        event.Skip()
+        if self.currentBallot == len(self.election.ballots) - 1:
+            pass
+        else:
+            self.PopulateBallot(self.currentBallot + 1)
 
     def onClickLast(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `onClickLast' not implemented")
-        event.Skip()
+        if self.currentBallot == len(self.election.ballots) - 1:
+            pass
+        else:
+            self.PopulateBallot(len(self.election.ballots) - 1)
     
     def onUpdateElectionName(self, event):
         if self.election == None:
@@ -514,7 +523,9 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             self.txtRound.SetValue("")
             self.txtRound.SetFocus()
+            
     def PopulateBallotAdvanced(self, ballot):
+        self.listProjects.DeleteAllItems()
         # Fill in availble projects tree
         catIdDict = {}
         root = self.treeProjects.AddRoot("Categories")
@@ -540,14 +551,28 @@ class MainFrame(wx.Frame):
         self.listProjects.SetColumnWidth(2, wx.LIST_AUTOSIZE)
     
     def PopulateBallotSimple(self, ballot):
+        self.gridBallot.ClearGrid()
         row = 0
         for id, item in ballot.ballotItems.iteritems():
             for v in item:
                 self.gridBallot.SetCellValue(row, 0, str(id))
                 self.gridBallot.SetCellValue(row, 1, str(self.election.projects[v.projectId].name))
                 self.gridBallot.SetCellValue(row, 2, "%.2f" % v.proposedFunding)
-            row += 1
+                row += 1
         self.gridBallot.AutoSizeColumns()
+    
+    def PopulateBallot(self, id):
+        try:
+            b = self.election.ballots[id]
+            self.PopulateBallotAdvanced(b)
+            self.PopulateBallotSimple(b)
+            bid = b.id + 1
+            name = b.name
+            total = len(self.election.ballots)
+            self.ballotsHead.SetLabel("Ballot %d of %d - %s" % (bid, total, name))
+            self.currentBallot = id
+        except KeyError:
+            self.ballotsHead.SetLabel("Ballot 0 of 0")
         
     def Populate(self):
         """Populate gui with data from loaded election"""
@@ -556,18 +581,8 @@ class MainFrame(wx.Frame):
         self.txtQuota.SetValue("%.2f" % self.election.quota)
         self.txtResources.SetValue("%.2f" % self.election.totalResources)
         self.txtRound.SetValue("%.2f" % self.election.roundToNearest)
-        # Load and populate first ballot (default to advanced view)
-        try:
-            b = self.election.ballots[0]
-            self.PopulateBallotAdvanced(b)
-            self.PopulateBallotSimple(b)
-            id = b.id + 1
-            name = b.name
-            total = len(self.election.ballots)
-            self.ballotsHead.SetLabel("Ballot %d of %d - %s" %
-                                    (id, total, name))
-        except KeyError:
-            self.ballotsHead.SetLabel("Ballot 0 of 0")
+        # Load and populate first ballot
+        self.PopulateBallot(0)
 
 # end of class MainFrame
 
