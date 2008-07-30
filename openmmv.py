@@ -326,9 +326,19 @@ class MainFrame(wx.Frame):
     def OnNewElection(self, event):
         if self.DiscardWarning() == False:
             return
-        self.AskToSave()
+        self.AskToSave()        
+        dlg = wx.TextEntryDialog(self, 
+                "Election name: ", "Start New Election", style=wx.OK|wx.CANCEL)
+        if dlg.ShowModal() != wx.ID_OK:
+            dlg.Destroy()
+            return
+        name = dlg.GetValue()
+        dlg.Destroy()
         self.election = elections.Election()
+        self.election.name = name
         Debug("Started new election.")
+        self.Populate()
+        self.needToSave = False
 
     def OnLoadElection(self, event):        
         if self.DiscardWarning() == False:
@@ -379,7 +389,9 @@ class MainFrame(wx.Frame):
     def OnAddCategory(self, event):
         dlg = wx.TextEntryDialog(self, 
                 "Category name: ", "Add New Category", style=wx.OK|wx.CANCEL)
-        dlg.ShowModal()
+        if dlg.ShowModal() != wx.ID_OK:
+            dlg.Destroy()
+            return
         name = dlg.GetValue()
         dlg.Destroy()
         id = len(self.election.categories) + 1
@@ -393,9 +405,19 @@ class MainFrame(wx.Frame):
         dialog.ShowModal()
         event.Skip()
 
-    def OnAddBallot(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `OnAddBallot' not implemented!")
-        event.Skip()
+    def OnAddBallot(self, event):
+        dlg = wx.TextEntryDialog(self, 
+                "Ballot name: ", "Add New Ballot", style=wx.OK|wx.CANCEL)
+        if dlg.ShowModal() != wx.ID_OK:
+            dlg.Destroy()
+            return
+        name = dlg.GetValue()
+        dlg.Destroy()
+        id = len(self.election.ballots)
+        self.election.ballots[id] = elections.Ballot(id, name)
+        self.needToSave = True
+        Debug("added ballot: %d - %s" % (id, name))
+        self.PopulateBallot(id)
 
     def OnQuit(self, event): # wxGlade: MainFrame.<event_handler>
         Debug("Event handler `OnQuit' not implemented!")
@@ -555,6 +577,9 @@ class MainFrame(wx.Frame):
             self.currentBallot = id
         except KeyError:
             self.ballotsHead.SetLabel("Ballot 0 of 0")
+            self.gridBallot.ClearGrid()
+            self.listProjects.DeleteAllItems()
+            self.treeProjects.DeleteAllItems()
         
     def Populate(self):
         """Populate gui with data from loaded election"""
