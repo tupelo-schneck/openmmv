@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import operator, election
+import operator, caml
 
 class FundingLevel:
     """
@@ -229,7 +229,7 @@ class Election:
     def run_election(self):
         # FIXME: results should be stored in self.results in some format
         input = self.pack_ocaml_election()
-        output = str(election.product(2,2)) # call ocaml function here
+        output = str(caml.product(2,2)) # call ocaml function here
         results = self.unpack_ocaml_election(output)
         print "You win! %s" % output
     

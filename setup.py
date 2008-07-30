@@ -3,12 +3,12 @@
 from distutils.core import setup, Extension
 import shutil
 
-module1 = Extension('election',
-                    sources = ['election.c'])
+module1 = Extension('caml',
+                    sources = ['caml.c'])
 
-setup (name = 'election',
+setup (name = 'caml',
        version = '1.0',
-       description = 'Run an election',
+       description = 'Connect with OCaml to run election',
        ext_modules = [module1])
 
-shutil.copyfile("./build/lib.linux-i686-2.5/election.so","./election.so")
+shutil.copyfile("./build/lib.linux-i686-2.5/caml.so","./caml.so")
