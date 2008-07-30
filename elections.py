@@ -116,8 +116,18 @@ class Election:
     roundToNearest = 0.0
     #results = Some Format I Haven't Decided On Yet
     
+    def reset(self):
+        self.name = ""
+        self.ballots = {}
+        self.projects = {}
+        self.categories = {}
+        self.totalResources = 0.0
+        self.quota = 0.0
+        self.roundToNearest = 0.0
+    
     def import_bltp(self, filename):
         # FIXME: this whole function needs error checking stuff.
+        self.reset()
         f = open(filename,"r")
         # deal with first line (resources, quota percentage, rounding, name)
         line1 = f.readline()

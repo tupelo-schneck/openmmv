@@ -312,7 +312,7 @@ class MainFrame(wx.Frame):
         self.needToSave = False
     
     def DiscardWarning(self):
-        if self.election != None:
+        if self.election != None and self.needToSave:
             dlg = wx.MessageDialog(self,
                              'Current election will be discarded.  '
                              'Would you like to continue?',
@@ -328,13 +328,11 @@ class MainFrame(wx.Frame):
             return
         self.AskToSave()
         self.election = elections.Election()
-        print "Started new election."
+        Debug("Started new election.")
 
     def OnLoadElection(self, event):        
         if self.DiscardWarning() == False:
             return
-        if self.election == None:
-            self.election = elections.Election()
         self.AskToSave()
         # FIXME: needs error checking.
         wildcard = "Election Files (*.bltp)|*.bltp|All Files|*.*"
@@ -345,11 +343,22 @@ class MainFrame(wx.Frame):
             return
         self.bltp = dlg.GetPath()
         dlg.Destroy()
+        self.election = elections.Election()
         self.election.import_bltp(self.bltp)
         self.Populate()
+        self.needToSave = False
 
-    def OnSaveElection(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `OnSaveElection' not implemented!")
+    def OnSaveElection(self, event):
+        wildcard = "Election Files (*.bltp)|*.bltp"
+        dlg = wx.FileDialog(self, "Save Election",
+                        os.getcwd(), "", wildcard, style=wx.SAVE|wx.CHANGE_DIR)
+        if dlg.ShowModal() != wx.ID_OK:
+            dlg.Destroy()
+            return
+        self.bltp = dlg.GetPath()
+        dlg.Destroy()
+        self.election.export_bltp(self.bltp)
+        self.needToSave = False
 
     def OnRunElection(self, event): # wxGlade: MainFrame.<event_handler>
         Debug("Event handler `OnRunElection' not implemented!")
@@ -375,9 +384,9 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
         id = len(self.election.categories) + 1
         self.election.categories[id] = elections.Category(id, name)
+        self.needToSave = True
         Debug("added cateogry: %d - %s" % (id, name))
-        b = self.election.ballots[self.currentBallot]
-        self.PopulateBallotSimple(b)
+        self.PopulateBallot(self.currentBallot)
 
     def OnAddProject(self, event):
         dialog = ProjectDialog(self, -1, "")
@@ -435,6 +444,7 @@ class MainFrame(wx.Frame):
             self.election = elections.Election()
         val = self.txtElectionName.GetValue()
         self.election.name = str(val)
+        self.needToSave = True
         Debug("new election value: name == %s" % self.election.name)
     
     def onUpdateQuota(self, event):
@@ -445,6 +455,7 @@ class MainFrame(wx.Frame):
             return
         try:
             self.election.quota = float(val)
+            self.needToSave = True
             Debug("new election value: quota == %.2f" % self.election.quota)
         except ValueError:
             dlg = wx.MessageDialog(self, 
@@ -462,6 +473,7 @@ class MainFrame(wx.Frame):
             return
         try:
             self.election.totalResources = float(val)
+            self.needToSave = True
             Debug("new election value: resources == %.2f" % self.election.totalResources)
         except ValueError:
             dlg = wx.MessageDialog(self, 
@@ -480,6 +492,7 @@ class MainFrame(wx.Frame):
             return
         try:
             self.election.roundToNearest = float(val)
+            self.needToSave = True
             Debug("new election value: round == %.2f" % self.election.roundToNearest)
         except ValueError:
             dlg = wx.MessageDialog(self, 
