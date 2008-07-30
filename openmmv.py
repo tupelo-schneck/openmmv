@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, os
+import sys, os, operator
 import wx, wx.grid
 import  wx.lib.mixins.listctrl  as  listmix
 import elections
@@ -68,55 +68,6 @@ class ProjectDialog(wx.Dialog):
         event.Skip()
 
 # end of class ProjectDialog
-
-
-class CategoryDialog(wx.Dialog):
-    def __init__(self, *args, **kwds):
-        # begin wxGlade: CategoryDialog.__init__
-        kwds["style"] = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER|wx.THICK_FRAME
-        wx.Dialog.__init__(self, *args, **kwds)
-        self.label_6 = wx.StaticText(self, -1, "Category Name: ")
-        self.textCatName = wx.TextCtrl(self, -1, "")
-        self.butCatCancel = wx.Button(self, wx.ID_CANCEL, "")
-        self.butCatOk = wx.Button(self, wx.ID_OK, "")
-
-        self.__set_properties()
-        self.__do_layout()
-
-        self.Bind(wx.EVT_BUTTON, self.onCatCancel, self.butCatCancel)
-        self.Bind(wx.EVT_BUTTON, self.onCatOk, self.butCatOk)
-        # end wxGlade
-
-    def __set_properties(self):
-        # begin wxGlade: CategoryDialog.__set_properties
-        self.SetTitle("Add a Project Category")
-        self.SetSize((279, 71))
-        # end wxGlade
-
-    def __do_layout(self):
-        # begin wxGlade: CategoryDialog.__do_layout
-        sizer_14 = wx.BoxSizer(wx.VERTICAL)
-        sizer_15 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_16 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_16.Add(self.label_6, 0, 0, 0)
-        sizer_16.Add(self.textCatName, 2, 0, 0)
-        sizer_14.Add(sizer_16, 1, wx.EXPAND, 0)
-        sizer_15.Add(self.butCatCancel, 1, wx.EXPAND, 0)
-        sizer_15.Add(self.butCatOk, 1, wx.EXPAND, 0)
-        sizer_14.Add(sizer_15, 1, wx.EXPAND, 0)
-        self.SetSizer(sizer_14)
-        self.Layout()
-        # end wxGlade
-
-    def onCatCancel(self, event): # wxGlade: CategoryDialog.<event_handler>
-        Debug("Event handler `onCatCancel' not implemented")
-        event.Skip()
-
-    def onCatOk(self, event): # wxGlade: CategoryDialog.<event_handler>
-        Debug("Event handler `onCatOk' not implemented")
-        event.Skip()
-
-# end of class CategoryDialog
 
 class BallotListCtrl(wx.ListCtrl,
                    listmix.ListCtrlAutoWidthMixin,
@@ -416,14 +367,17 @@ class MainFrame(wx.Frame):
         Debug("Event handler `OnSaveCsv' not implemented!")
         event.Skip()
 
-    def OnAddCategory(self, event): # wxGlade: MainFrame.<event_handler>
-        dialog = CategoryDialog(self, -1, "")
-        dialog.Show()
-        event.Skip()
+    def OnAddCategory(self, event):
+        dlg = wx.TextEntryDialog(self, 
+                "Category name: ", "Add New Category", style=wx.OK|wx.CANCEL)
+        dlg.ShowModal()
+        name = dlg.GetValue()
+        dlg.Destroy()
+        Debug("cateogry: %s" % name)
 
-    def OnAddProject(self, event): # wxGlade: MainFrame.<event_handler>
+    def OnAddProject(self, event):
         dialog = ProjectDialog(self, -1, "")
-        dialog.Show()
+        dialog.ShowModal()
         event.Skip()
 
     def OnAddBallot(self, event): # wxGlade: MainFrame.<event_handler>
@@ -448,25 +402,25 @@ class MainFrame(wx.Frame):
             self.PopulateBallot(b.id)
             self.txtSearch.SetValue("")
 
-    def onClickFirst(self, event): # wxGlade: MainFrame.<event_handler>
+    def onClickFirst(self, event):
         if self.currentBallot in [0, None]:
             pass
         else:
             self.PopulateBallot(0)
 
-    def onClickPrev(self, event): # wxGlade: MainFrame.<event_handler>
+    def onClickPrev(self, event):
         if self.currentBallot in [0, None]:
             pass
         else:
             self.PopulateBallot(self.currentBallot - 1)
 
-    def onClickNext(self, event): # wxGlade: MainFrame.<event_handler>
+    def onClickNext(self, event):
         if self.currentBallot in [None, len(self.election.ballots) - 1]:
             pass
         else:
             self.PopulateBallot(self.currentBallot + 1)
 
-    def onClickLast(self, event): # wxGlade: MainFrame.<event_handler>
+    def onClickLast(self, event):
         if self.currentBallot in [None, len(self.election.ballots) - 1]:
             pass
         else:
@@ -536,11 +490,13 @@ class MainFrame(wx.Frame):
         # Fill in availble projects tree
         catIdDict = {}
         root = self.treeProjects.AddRoot("Categories")
-        for k, v in self.election.categories.iteritems():
+        dict = sorted(self.election.categories.values(), key=operator.attrgetter("name"))
+        for v in dict:
             child = self.treeProjects.AppendItem(root, "%s" % v.name)
             self.treeProjects.SetPyData(child, v)
-            catIdDict[k] = child
-        for k, v in self.election.projects.iteritems():
+            catIdDict[v.id] = child
+        dict = sorted(self.election.projects.values(), key=operator.attrgetter("name"))
+        for v in dict:
             root = catIdDict[v.category]
             child = self.treeProjects.AppendItem(root, "%s" % v.name)
             self.treeProjects.SetPyData(child, v)
