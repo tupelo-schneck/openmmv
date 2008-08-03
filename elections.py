@@ -252,7 +252,7 @@ class Election:
         pass
             
     def get_item_by_name(self, name, itemDict):
-        """Search given itemDict for named item and retrun the instance"""
+        """Search given itemDict for named item and return the instance"""
         try:
             if itemDict not in [self.ballots, self.categories, self.projects]:
                 raise TypeError("Supplied dict is not ballots, categories, or projects dict")

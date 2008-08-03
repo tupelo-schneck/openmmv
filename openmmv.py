@@ -11,60 +11,59 @@ class ProjectDialog(wx.Dialog):
         # begin wxGlade: ProjectDialog.__init__
         kwds["style"] = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER|wx.THICK_FRAME
         wx.Dialog.__init__(self, *args, **kwds)
-        self.label_7 = wx.StaticText(self, -1, "Project Name: ")
-        self.textProjName = wx.TextCtrl(self, -1, "")
-        self.label_8 = wx.StaticText(self, -1, "Category: ")
-        self.listProjCat = wx.ListBox(self, -1, choices=["Item 1", "Item 2"])
-        self.butProjAddCat = wx.Button(self, -1, "Add Category")
-        self.butProjectCancel = wx.Button(self, wx.ID_CANCEL, "")
-        self.butProjectOk = wx.Button(self, wx.ID_OK, "")
+        self.label_1 = wx.StaticText(self, -1, "Project Name: ")
+        self.txtName = wx.TextCtrl(self, -1, "")
+        self.label_2 = wx.StaticText(self, -1, "Category: ")
+        self.listCategories = wx.ListBox(self, -1, choices=[], style=wx.LB_SINGLE)
+        self.butAddCategory = wx.Button(self, -1, "Add Category")
+        self.label_3 = wx.StaticText(self, -1, "Minimum Budget: ")
+        self.txtMin = wx.TextCtrl(self, -1, "")
+        self.label_4 = wx.StaticText(self, -1, "Maximum Budget: ")
+        self.txtMax = wx.TextCtrl(self, -1, "")
+        self.ProjectCancel = wx.Button(self, wx.ID_CANCEL, "")
+        self.ProjectOk = wx.Button(self, wx.ID_OK, "")
 
         self.__set_properties()
         self.__do_layout()
 
-        self.Bind(wx.EVT_BUTTON, self.OnAddCategory, self.butProjAddCat)
-        self.Bind(wx.EVT_BUTTON, self.onProjCancel, self.butProjectCancel)
-        self.Bind(wx.EVT_BUTTON, self.onProjOk, self.butProjectOk)
+        self.Bind(wx.EVT_BUTTON, self.onNewProjectAddCat, self.butAddCategory)
         # end wxGlade
 
     def __set_properties(self):
-        # begin wxGlade: ProjectDialog.__set_properties
-        self.SetTitle("Add a new Project")
-        self.listProjCat.SetSelection(0)
-        # end wxGlade
+        self.SetTitle("Add New Project")
+        self.SetSize((422, 284))
 
     def __do_layout(self):
         # begin wxGlade: ProjectDialog.__do_layout
-        sizer_17 = wx.BoxSizer(wx.VERTICAL)
-        sizer_20 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_19 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_18 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_18.Add(self.label_7, 1, 0, 0)
-        sizer_18.Add(self.textProjName, 2, 0, 0)
-        sizer_17.Add(sizer_18, 1, wx.EXPAND, 0)
-        sizer_19.Add(self.label_8, 0, 0, 0)
-        sizer_19.Add(self.listProjCat, 1, 0, 0)
-        sizer_19.Add(self.butProjAddCat, 0, 0, 0)
-        sizer_17.Add(sizer_19, 1, wx.EXPAND, 0)
-        sizer_20.Add(self.butProjectCancel, 1, wx.EXPAND, 0)
-        sizer_20.Add(self.butProjectOk, 1, wx.EXPAND, 0)
-        sizer_17.Add(sizer_20, 1, wx.EXPAND, 0)
-        self.SetSizer(sizer_17)
-        sizer_17.Fit(self)
+        sizer_1 = wx.BoxSizer(wx.VERTICAL)
+        sizer_5 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_4 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_3 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_2.Add(self.label_1, 0, 0, 0)
+        sizer_2.Add(self.txtName, 0, 0, 0)
+        sizer_1.Add(sizer_2, 0, wx.EXPAND, 0)
+        sizer_3.Add(self.label_2, 0, 0, 0)
+        sizer_3.Add(self.listCategories, 1, wx.EXPAND, 0)
+        sizer_3.Add(self.butAddCategory, 0, 0, 0)
+        sizer_1.Add(sizer_3, 1, wx.EXPAND, 0)
+        sizer_4.Add(self.label_3, 0, wx.LEFT|wx.RIGHT, 3)
+        sizer_4.Add(self.txtMin, 0, 0, 0)
+        sizer_4.Add(self.label_4, 0, wx.LEFT|wx.RIGHT, 5)
+        sizer_4.Add(self.txtMax, 0, 0, 0)
+        sizer_1.Add(sizer_4, 0, wx.EXPAND, 0)
+        sizer_5.Add(self.ProjectCancel, 0, wx.EXPAND, 0)
+        sizer_5.Add(self.ProjectOk, 0, wx.EXPAND, 0)
+        sizer_1.Add(sizer_5, 0, wx.EXPAND, 0)
+        self.SetSizer(sizer_1)
         self.Layout()
         # end wxGlade
+    
+    def PopulateCatList(self, list):
+        self.listCategories.InsertItems(list,0)
 
-    def OnAddCategory(self, event): # wxGlade: ProjectDialog.<event_handler>
-        dialog = CategoryDialog(self, -1, "")
-        dialog.Show()
-        event.Skip()
-
-    def onProjCancel(self, event): # wxGlade: ProjectDialog.<event_handler>
-        Debug("Event handler `onProjCancel' not implemented!")
-        event.Skip()
-
-    def onProjOk(self, event): # wxGlade: ProjectDialog.<event_handler>
-        Debug("Event handler `onProjOk' not implemented!")
+    def onNewProjectAddCat(self, event): # wxGlade: ProjectDialog.<event_handler>
+        print "Event handler `onNewProjectAddCat' not implemented!"
         event.Skip()
 
 # end of class ProjectDialog
@@ -387,6 +386,8 @@ class MainFrame(wx.Frame):
         event.Skip()
 
     def OnAddCategory(self, event):
+        if self.election == None:
+            self.election = elections.Election()
         dlg = wx.TextEntryDialog(self, 
                 "Category name: ", "Add New Category", style=wx.OK|wx.CANCEL)
         if dlg.ShowModal() != wx.ID_OK:
@@ -401,11 +402,31 @@ class MainFrame(wx.Frame):
         self.PopulateBallot(self.currentBallot)
 
     def OnAddProject(self, event):
-        dialog = ProjectDialog(self, -1, "")
-        dialog.ShowModal()
-        event.Skip()
+        if self.election == None:
+            self.election = elections.Election()
+        catList = []
+        for c in self.election.categories.values():
+            catList.append(c.name)
+        dlg = ProjectDialog(self, -1, "")
+        dlg.PopulateCatList(catList)
+        if dlg.ShowModal() != wx.ID_OK:
+            dlg.Destroy()
+            return
+        name = dlg.txtName.GetValue()
+        catName = dlg.listCategories.GetStringSelection()
+        cat = self.election.get_item_by_name(catName, self.election.categories)
+        min = float(dlg.txtMin.GetValue())
+        max = float(dlg.txtMax.GetValue())
+        dlg.Destroy()
+        id = len(self.election.projects)
+        self.election.projects[id] = elections.Project(id, name, min, max, cat.id)
+        self.needToSave = True
+        Debug("added project: %d - %s" % (id, name))
+        self.PopulateBallot(self.currentBallot)
 
     def OnAddBallot(self, event):
+        if self.election == None:
+            self.election = elections.Election()
         dlg = wx.TextEntryDialog(self, 
                 "Ballot name: ", "Add New Ballot", style=wx.OK|wx.CANCEL)
         if dlg.ShowModal() != wx.ID_OK:
@@ -576,6 +597,7 @@ class MainFrame(wx.Frame):
             self.ballotsHead.SetLabel("Ballot %d of %d - %s" % (bid, total, name))
             self.currentBallot = id
         except KeyError:
+            Debug("No ballots in current election.")
             self.ballotsHead.SetLabel("Ballot 0 of 0")
             self.gridBallot.ClearGrid()
             self.listProjects.DeleteAllItems()
