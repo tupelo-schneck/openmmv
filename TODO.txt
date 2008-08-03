@@ -4,3 +4,4 @@ TODO:
 * make editing and saving ballots work
 * drag and drop in advanced ballot view
 * limit ballot editing to funding proposals only
+* validate all input
