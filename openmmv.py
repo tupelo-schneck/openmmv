@@ -22,12 +22,15 @@ class ProjectDialog(wx.Dialog):
         self.txtMax = wx.TextCtrl(self, -1, "")
         self.ProjectCancel = wx.Button(self, wx.ID_CANCEL, "")
         self.ProjectOk = wx.Button(self, wx.ID_OK, "")
+        
+        self.parent = args[0]
 
         self.__set_properties()
         self.__do_layout()
 
         self.Bind(wx.EVT_BUTTON, self.onNewProjectAddCat, self.butAddCategory)
-        # end wxGlade
+        
+        self.PopulateCatList()
 
     def __set_properties(self):
         self.SetTitle("Add New Project")
@@ -57,16 +60,18 @@ class ProjectDialog(wx.Dialog):
         sizer_1.Add(sizer_5, 0, wx.EXPAND, 0)
         self.SetSizer(sizer_1)
         self.Layout()
-        # end wxGlade
-    
-    def PopulateCatList(self, list):
-        self.listCategories.InsertItems(list,0)
 
-    def onNewProjectAddCat(self, event): # wxGlade: ProjectDialog.<event_handler>
-        print "Event handler `onNewProjectAddCat' not implemented!"
-        event.Skip()
+    def PopulateCatList(self):
+        self.listCategories.Clear()
+        catList = []
+        for c in self.parent.election.categories.values():
+            catList.append(c.name)
+        catList.sort()
+        self.listCategories.InsertItems(catList,0)
 
-# end of class ProjectDialog
+    def onNewProjectAddCat(self, event):
+        self.parent.OnAddCategory(event)
+        self.PopulateCatList()
 
 class BallotListCtrl(wx.ListCtrl,
                    listmix.ListCtrlAutoWidthMixin,
@@ -86,9 +91,6 @@ class BallotListCtrl(wx.ListCtrl,
         self.SetColumnWidth(2, wx.LIST_AUTOSIZE)
         
         listmix.TextEditMixin.__init__(self)
-        
-# This is used to capture stdout/stderr from STV.py and send
-# it to a wxPython window.
 
 class Output:
     """
@@ -404,11 +406,7 @@ class MainFrame(wx.Frame):
     def OnAddProject(self, event):
         if self.election == None:
             self.election = elections.Election()
-        catList = []
-        for c in self.election.categories.values():
-            catList.append(c.name)
         dlg = ProjectDialog(self, -1, "")
-        dlg.PopulateCatList(catList)
         if dlg.ShowModal() != wx.ID_OK:
             dlg.Destroy()
             return
