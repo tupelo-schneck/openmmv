@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, os, operator
+import sys, os, operator, string
 import wx, wx.grid
 import  wx.lib.mixins.listctrl  as  listmix
 import elections
@@ -102,6 +102,66 @@ class Output:
     def write(self, txt):
         self.console.AppendText(txt)
 
+# Validator Flags
+ALPHA_ONLY = 1
+DIGIT_ONLY = 2
+FLOAT_ONLY = 3
+
+class FieldValidator(wx.PyValidator):
+    def __init__(self, flag=None, pyVar=None):
+        wx.PyValidator.__init__(self)
+        self.flag = flag
+        self.Bind(wx.EVT_CHAR, self.OnChar)
+
+    def Clone(self):
+        return FieldValidator(self.flag)
+
+    def Validate(self, win):
+        tc = self.GetWindow()
+        val = tc.GetValue()
+        
+        if self.flag == ALPHA_ONLY:
+            for x in val:
+                if x not in string.letters:
+                    return False
+
+        elif self.flag == DIGIT_ONLY:
+            for x in val:
+                if x not in string.digits:
+                    return False
+
+        elif self.flag == FLOAT_ONLY:
+            for x in val:
+                if x not in string.digits + ".":
+                    return False
+
+        return True
+
+
+    def OnChar(self, event):
+        key = event.GetKeyCode()
+
+        if key < wx.WXK_SPACE or key == wx.WXK_DELETE or key > 255:
+            event.Skip()
+            return
+
+        if self.flag == ALPHA_ONLY and chr(key) in string.letters:
+            event.Skip()
+            return
+
+        if self.flag == DIGIT_ONLY and chr(key) in string.digits:
+            event.Skip()
+            return
+
+        if self.flag == FLOAT_ONLY and chr(key) in string.digits + ".":
+            event.Skip()
+            return
+
+        if not wx.Validator_IsSilent():
+            wx.Bell()
+
+        return
+
 class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):        
         # begin wxGlade: MainFrame.__init__
@@ -155,7 +215,7 @@ class MainFrame(wx.Frame):
         self.label_2 = wx.StaticText(self.MainNotebook_pane_1, -1, "Election Name: ")
         self.txtElectionName = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
         self.label_4 = wx.StaticText(self.MainNotebook_pane_1, -1, "Quota Percent: ")
-        self.txtQuota = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
+        self.txtQuota = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", validator=FieldValidator(FLOAT_ONLY), style=wx.TE_PROCESS_ENTER)
         self.label_3 = wx.StaticText(self.MainNotebook_pane_1, -1, "Total Resources: ")
         self.txtResources = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
         self.label_5 = wx.StaticText(self.MainNotebook_pane_1, -1, "Round to Nearest: ")
@@ -325,9 +385,9 @@ class MainFrame(wx.Frame):
         return True
 
     def OnNewElection(self, event):
+        self.AskToSave() 
         if self.DiscardWarning() == False:
-            return
-        self.AskToSave()        
+            return       
         dlg = wx.TextEntryDialog(self, 
                 "Election name: ", "Start New Election", style=wx.OK|wx.CANCEL)
         if dlg.ShowModal() != wx.ID_OK:
@@ -341,10 +401,10 @@ class MainFrame(wx.Frame):
         self.Populate()
         self.needToSave = False
 
-    def OnLoadElection(self, event):        
+    def OnLoadElection(self, event): 
+        self.AskToSave()       
         if self.DiscardWarning() == False:
             return
-        self.AskToSave()
         # FIXME: needs error checking.
         wildcard = "Election Files (*.bltp)|*.bltp|All Files|*.*"
         dlg = wx.FileDialog(self, "Open Election File",
@@ -390,6 +450,7 @@ class MainFrame(wx.Frame):
     def OnAddCategory(self, event):
         if self.election == None:
             self.election = elections.Election()
+            self.needToSave = True
         dlg = wx.TextEntryDialog(self, 
                 "Category name: ", "Add New Category", style=wx.OK|wx.CANCEL)
         if dlg.ShowModal() != wx.ID_OK:
@@ -406,6 +467,7 @@ class MainFrame(wx.Frame):
     def OnAddProject(self, event):
         if self.election == None:
             self.election = elections.Election()
+            self.needToSave = True
         dlg = ProjectDialog(self, -1, "")
         if dlg.ShowModal() != wx.ID_OK:
             dlg.Destroy()
@@ -425,6 +487,7 @@ class MainFrame(wx.Frame):
     def OnAddBallot(self, event):
         if self.election == None:
             self.election = elections.Election()
+            self.needToSave = True
         dlg = wx.TextEntryDialog(self, 
                 "Ballot name: ", "Add New Ballot", style=wx.OK|wx.CANCEL)
         if dlg.ShowModal() != wx.ID_OK:
@@ -483,6 +546,7 @@ class MainFrame(wx.Frame):
     def onUpdateElectionName(self, event):
         if self.election == None:
             self.election = elections.Election()
+            self.needToSave = True
         val = self.txtElectionName.GetValue()
         self.election.name = str(val)
         self.needToSave = True
@@ -491,6 +555,7 @@ class MainFrame(wx.Frame):
     def onUpdateQuota(self, event):
         if self.election == None:
             self.election = elections.Election()
+            self.needToSave = True
         val = self.txtQuota.GetValue()
         if val in [None, ""]:
             return
@@ -509,6 +574,7 @@ class MainFrame(wx.Frame):
     def onUpdateResources(self, event):
         if self.election == None:
             self.election = elections.Election()
+            self.needToSave = True
         val = self.txtResources.GetValue()
         if val in [None, ""]:
             return
@@ -527,7 +593,7 @@ class MainFrame(wx.Frame):
     def onUpdateRound(self, event):
         if self.election == None:
             self.election = elections.Election()
-        self.CheckForElection()
+            self.needToSave = True
         val = self.txtRound.GetValue()
         if val in [None, ""]:
             return
