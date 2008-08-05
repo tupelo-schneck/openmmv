@@ -1,7 +1,7 @@
 TODO:
 
-* hook up all menu events
-* make editing and saving ballots work
-* drag and drop in advanced ballot view
-* limit ballot editing to funding proposals only
+* figure out elections results variable format
+* hook up all results-related menu events
+* implement drag and drop in advanced ballot view
+* limit ballot editing to "funding proposals" column only
 * validate all input

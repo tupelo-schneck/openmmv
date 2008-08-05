@@ -106,6 +106,7 @@ class Election:
     totalResources (float)  - total amount of money to be allocated
     quota (float)   - number of votes a project needs to get funded
     roundToNearest (float)  - smallest change in resources we care about
+    results (TBD)   - results in some format i haven't decided on yet
     """
     name = ""
     ballots = {}    # {id: Ballot instance}
@@ -114,7 +115,7 @@ class Election:
     totalResources = 0.0
     quota = 0.0
     roundToNearest = 0.0
-    #results = Some Format I Haven't Decided On Yet
+    results = None
     
     def reset(self):
         self.name = ""
@@ -240,8 +241,7 @@ class Election:
         # FIXME: results should be stored in self.results in some format
         input = self.pack_ocaml_election()
         output = str(caml.product(2,2)) # call ocaml function here
-        results = self.unpack_ocaml_election(output)
-        print "You win! %s" % output
+        self.results = self.unpack_ocaml_election(output)
     
     def pack_ocaml_election(self):
         """Packs election info into a string to by processed by ocaml"""
@@ -249,7 +249,7 @@ class Election:
     
     def unpack_ocaml_election(self, output):
         """Unpack election results string returned from ocaml"""
-        pass
+        return "You win! And 2 * 2 is %s." % output
             
     def get_item_by_name(self, name, itemDict):
         """Search given itemDict for named item and return the instance"""

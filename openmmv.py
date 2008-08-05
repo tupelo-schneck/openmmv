@@ -446,9 +446,17 @@ class MainFrame(wx.Frame):
         self.election.export_bltp(self.bltp)
         self.needToSave = False
 
-    def OnRunElection(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `OnRunElection' not implemented!")
-        event.Skip()
+    def OnRunElection(self, event):
+        if self.election == None:
+            dlg = wx.MessageDialog(self,
+                             'No election to run!\n'
+                             'Please create an election first.',
+                             'Warning', wx.OK | wx.ICON_WARNING)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+        self.election.run_election()
+        Debug(self.election.results)
 
     def OnSaveHtml(self, event): # wxGlade: MainFrame.<event_handler>
         Debug("Event handler `OnSaveHtml' not implemented!")
