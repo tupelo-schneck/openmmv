@@ -111,6 +111,7 @@ class FieldValidator(wx.PyValidator):
     def __init__(self, flag=None, pyVar=None):
         wx.PyValidator.__init__(self)
         self.flag = flag
+        self.dotted = False
         self.Bind(wx.EVT_CHAR, self.OnChar)
 
     def Clone(self):
@@ -134,6 +135,11 @@ class FieldValidator(wx.PyValidator):
             for x in val:
                 if x not in string.digits + ".":
                     return False
+                if x == ".":
+                    if self.dotted == False:
+                        self.dotted = True
+                    else:
+                        return False
 
         return True
 
@@ -154,8 +160,16 @@ class FieldValidator(wx.PyValidator):
             return
 
         if self.flag == FLOAT_ONLY and chr(key) in string.digits + ".":
-            event.Skip()
-            return
+            if chr(key) == ".":                
+                if self.dotted == False:
+                    self.dotted = True
+                    event.Skip()
+                    return
+                else:
+                    pass
+            else:
+                event.Skip()
+                return
 
         if not wx.Validator_IsSilent():
             wx.Bell()
@@ -217,9 +231,9 @@ class MainFrame(wx.Frame):
         self.label_4 = wx.StaticText(self.MainNotebook_pane_1, -1, "Quota Percent: ")
         self.txtQuota = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", validator=FieldValidator(FLOAT_ONLY), style=wx.TE_PROCESS_ENTER)
         self.label_3 = wx.StaticText(self.MainNotebook_pane_1, -1, "Total Resources: ")
-        self.txtResources = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
+        self.txtResources = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", validator=FieldValidator(FLOAT_ONLY), style=wx.TE_PROCESS_ENTER)
         self.label_5 = wx.StaticText(self.MainNotebook_pane_1, -1, "Round to Nearest: ")
-        self.txtRound = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", style=wx.TE_PROCESS_ENTER)
+        self.txtRound = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", validator=FieldValidator(FLOAT_ONLY), style=wx.TE_PROCESS_ENTER)
         self.ballotsHead = wx.StaticText(self.MainNotebook_pane_1, -1, "Ballot ID of TOTAL - NAME")
         self.treeProjects = wx.TreeCtrl(self.window_1_pane_1, -1, style=wx.TR_HAS_BUTTONS|wx.TR_DEFAULT_STYLE|wx.TR_HIDE_ROOT|wx.SUNKEN_BORDER)
         self.listProjects = BallotListCtrl(self.window_1_pane_2, -1, style=wx.LC_REPORT|wx.SUNKEN_BORDER)
@@ -234,6 +248,7 @@ class MainFrame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
 
+        wx.EVT_CLOSE(self, self.OnClose)
         self.Bind(wx.EVT_MENU, self.OnNewElection, self.new_election)
         self.Bind(wx.EVT_MENU, self.OnLoadElection, self.load_election)
         self.Bind(wx.EVT_MENU, self.OnSaveElection, self.save_election)
@@ -369,8 +384,8 @@ class MainFrame(wx.Frame):
                              'Warning', wx.YES_NO | wx.ICON_INFORMATION)
             if dlg.ShowModal() == wx.ID_YES:
                 self.OnSaveElection(None)
+                self.needToSave = False
             dlg.Destroy()
-        self.needToSave = False
     
     def DiscardWarning(self):
         if self.election != None and self.needToSave:
@@ -401,7 +416,7 @@ class MainFrame(wx.Frame):
         self.Populate()
         self.needToSave = False
 
-    def OnLoadElection(self, event): 
+    def OnLoadElection(self, event):
         self.AskToSave()       
         if self.DiscardWarning() == False:
             return
@@ -501,9 +516,14 @@ class MainFrame(wx.Frame):
         Debug("added ballot: %d - %s" % (id, name))
         self.PopulateBallot(id)
 
-    def OnQuit(self, event): # wxGlade: MainFrame.<event_handler>
-        Debug("Event handler `OnQuit' not implemented!")
-        event.Skip()
+    def OnClose(self, event): 
+        self.AskToSave()       
+        if self.DiscardWarning() == False:
+            return
+        self.Destroy()
+
+    def OnQuit(self, event):
+        self.Close()
 
     def onSearch(self, event):
         name = event.GetString()
