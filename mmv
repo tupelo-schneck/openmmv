@@ -1,0 +1,1 @@
+bin/mmv -I obj -init mmv_init.ml

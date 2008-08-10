@@ -17,6 +17,7 @@ let new_initial_funding_level amount = {
 }
 
 type project = {
+  projectid : int;
   pname : string;
   minimum : currency;
   maximum : currency;
@@ -25,7 +26,7 @@ type project = {
 }
 
 type ballot_item = {
-  project : string;
+  bprojectid : int;
   bamount : currency;
   prior : currency; (* how much has already gone to this project on this ballot *)
   mutable actual_amount : currency; 
@@ -36,6 +37,7 @@ type ballot_item = {
 type ballot_priority = ballot_item list
 
 type ballot = {
+  ballotid : int;
   bname : string;
   priorities : ballot_priority list;
 }
@@ -70,7 +72,7 @@ let support (g:game) (flat_before:currency) (spent_before:currency) (flat_here:c
   if support *. flat_here > spend_limit then spend_limit /. flat_here else support
 
 let project_for_ballot_item (g:game) (b:ballot_item) : project =
-  List.find (fun p -> p.pname = b.project) g.projects
+  List.find (fun p -> p.projectid = b.bprojectid) g.projects
 
 let spent_on_ballot_priority (bp:ballot_priority) : currency =
   let rec aux bs acc =

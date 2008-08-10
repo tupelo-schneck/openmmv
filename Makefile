@@ -1,5 +1,5 @@
 MLMODULES = pycaml
-CMODULES = pycaml
+CMODULES = pycaml pycamlmmv
 
 OBJ = obj
 BIN = bin
@@ -20,7 +20,6 @@ CFLAGS = -Wall -I /opt/local/lib/ocaml \
   -I /System/Library/Frameworks/Python.framework/Versions/2.3/include/python2.3/
 
 vpath %.o $(OBJ)
-vpath .ocamlinit $(BIN)
 vpath %.cmi $(OBJ)
 vpath %.cmo $(OBJ)
 vpath %.cmx $(OBJ)

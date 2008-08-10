@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import operator, caml
+import operator
 
 class FundingLevel:
     """
@@ -9,10 +9,10 @@ class FundingLevel:
     support (float)     - The number of supporters at that dollar amount
     nweSupport (float)  - A holding variable used during vote counting
     """
-    def __init__(self, amount, support, newsupport=None):
+    def __init__(self, amount, support, prevSupport=None):
         self.amount = amount
         self.support = support
-        self.newSupport = newsupport
+        self.prevSupport = prevSupport
 
 class Project:
     """
@@ -20,7 +20,7 @@ class Project:
     id (int)                - An automatically generated id number.  Used internally
     name (string)           - Name of the project
     minimumBudget (float)   - Lowest amount this project is requesting
-    maximumBudeget (float)  - Highest amount this project is requesting
+    maximumBudegt (float)   - Highest amount this project is requesting
     category (int)          - Id of cateogry this project belongs to (0 for none)
     eliminated (float)      - Dollar amount at which a funding level is
                               eliminated.  Starts at infinity, drops as election is run

@@ -3,6 +3,8 @@
 #include <caml/alloc.h>
 #include <caml/memory.h>
 
+extern void initpycamlmmv();
+
 static int done;
 
 static PyObject*
@@ -28,9 +30,14 @@ CAMLprim value ml_python(value unit)
   if (!initialized) {
     Py_Initialize();
     Py_InitModule("pycaml", PycamlMethods);
+
+    initpycamlmmv();
+
     PyRun_SimpleString("import sys");
     PyRun_SimpleString("sys.ps1 = '>>> '");
     PyRun_SimpleString("sys.ps2 = '... '");
+    PyRun_SimpleString("sys.path.insert(0,'')");
+    PyRun_SimpleString("import pycaml");
     PyRun_SimpleString("from pycaml import ocaml");
     initialized = 1;
   }
