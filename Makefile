@@ -1,4 +1,4 @@
-MLMODULES = pycaml
+MLMODULES = mmv pycamlmmv pycaml
 CMODULES = pycaml pycamlmmv
 
 OBJ = obj

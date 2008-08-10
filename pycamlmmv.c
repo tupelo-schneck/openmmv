@@ -2,11 +2,20 @@
 #include <caml/mlvalues.h>
 #include <caml/alloc.h>
 #include <caml/memory.h>
+#include <caml/callback.h>
 
 PyObject* class_FundingLevel;
+value default_utility;
+
+CAMLprim value ml_register_utility(value u)
+{
+  default_utility = u;
+  caml_register_global_root (&default_utility);
+  return Val_unit;
+}
 
 static PyObject*
-pycamlmmv_register_classes(PyObject *self, PyObject *args)
+pycamlmmv_register_class(PyObject *self, PyObject *args)
 {
   if(!PyArg_ParseTuple(args, "O", &class_FundingLevel))
     return NULL;
@@ -15,7 +24,8 @@ pycamlmmv_register_classes(PyObject *self, PyObject *args)
   return Py_None;
 }
 
-value ml_list_of_PyList (PyObject* pylist, value (*conv)(PyObject*)) 
+value 
+ml_list_of_PyList (PyObject* pylist, value (*conv)(PyObject*)) 
 {
   CAMLparam0();
   CAMLlocal2(res,curr);
@@ -42,7 +52,8 @@ value ml_list_of_PyList (PyObject* pylist, value (*conv)(PyObject*))
   CAMLreturn(res);
 }
 
-PyObject* PyList_of_ml_list (value v, PyObject* (*conv)(value))
+PyObject* 
+PyList_of_ml_list (value v, PyObject* (*conv)(value))
 {
   CAMLparam1(v);
   CAMLlocal1(curr);
@@ -139,6 +150,8 @@ PyProject_gets_ml_project(PyObject* p, value v)
   Py_DECREF(tmp);
 }
 
+#define PyFloat_AsDouble_NoneZero(x) (x==Py_None ? 0.0 : PyFloat_AsDouble(x)) 
+
 value
 ml_ballot_item_of_PyBallotItem(PyObject* p)
 {
@@ -150,19 +163,19 @@ ml_ballot_item_of_PyBallotItem(PyObject* p)
   Store_field(res,0,Val_int(PyInt_AsLong(tmp)));
   Py_DECREF(tmp);
   tmp = PyObject_GetAttrString(p,"proposedFunding");
-  Store_field(res,1,caml_copy_double(PyFloat_AsDouble(tmp)));
+  Store_field(res,1,caml_copy_double(PyFloat_AsDouble_NoneZero(tmp)));
   Py_DECREF(tmp);
   tmp = PyObject_GetAttrString(p,"priorProposedFunding");
-  Store_field(res,2,caml_copy_double(PyFloat_AsDouble(tmp)));
+  Store_field(res,2,caml_copy_double(PyFloat_AsDouble_NoneZero(tmp)));
   Py_DECREF(tmp);
   tmp = PyObject_GetAttrString(p,"actualTotalFunding");
-  Store_field(res,3,caml_copy_double(PyFloat_AsDouble(tmp)));
+  Store_field(res,3,caml_copy_double(PyFloat_AsDouble_NoneZero(tmp)));
   Py_DECREF(tmp);
   tmp = PyObject_GetAttrString(p,"voterSupport");
-  Store_field(res,4,caml_copy_double(PyFloat_AsDouble(tmp)));
+  Store_field(res,4,caml_copy_double(PyFloat_AsDouble_NoneZero(tmp)));
   Py_DECREF(tmp);
   tmp = PyObject_GetAttrString(p,"voterFunding");
-  Store_field(res,5,caml_copy_double(PyFloat_AsDouble(tmp)));
+  Store_field(res,5,caml_copy_double(PyFloat_AsDouble_NoneZero(tmp)));
   Py_DECREF(tmp);
   CAMLreturn(res);
 }
@@ -171,13 +184,13 @@ void
 PyBallotItem_gets_ml_ballot_item(PyObject* p, value v)
 {
   PyObject* tmp;
-  tmp = PyFloat_FromDouble(Double_val(Field(v,4)));
+  tmp = PyFloat_FromDouble(Double_val(Field(v,3)));
   PyObject_SetAttrString(p,"actualTotalFunding",tmp);
   Py_DECREF(tmp);
-  tmp = PyFloat_FromDouble(Double_val(Field(v,5)));
+  tmp = PyFloat_FromDouble(Double_val(Field(v,4)));
   PyObject_SetAttrString(p,"voterSupport",tmp);
   Py_DECREF(tmp);
-  tmp = PyFloat_FromDouble(Double_val(Field(v,6)));
+  tmp = PyFloat_FromDouble(Double_val(Field(v,5)));
   PyObject_SetAttrString(p,"voterFunding",tmp);
   Py_DECREF(tmp);
 }
@@ -230,7 +243,7 @@ PyBallot_gets_ml_ballot(PyObject* p, value v)
   PyList_Sort(keys);
   priorities = Field(v,2);
   for (i = 0; i < PyList_Size(keys); i++) {
-    items = PyList_GetItem(keys,i);
+    items = PyDict_GetItem(tmp,PyList_GetItem(keys,i));
     mlitems = Field(priorities,0);
     for (j = 0; j < PyList_Size(items); j++) {
       PyBallotItem_gets_ml_ballot_item(PyList_GetItem(items,j), Field(mlitems,0));
@@ -242,26 +255,101 @@ PyBallot_gets_ml_ballot(PyObject* p, value v)
   Py_DECREF(tmp);
 }
 
+value
+ml_game_of_PyElection(PyObject* p)
+{
+  CAMLparam0();
+  CAMLlocal1(res);
+  PyObject* tmp;
+  PyObject* values;
+  res = caml_alloc(6,0);
+  tmp = PyObject_GetAttrString(p,"totalResources");
+  Store_field(res,0,caml_copy_double(PyFloat_AsDouble(tmp)));
+  Py_DECREF(tmp);
+  tmp = PyObject_GetAttrString(p,"projects");
+  values = PyDict_Values(tmp);
+  Store_field(res,1,ml_list_of_PyList(values,
+				      ml_project_of_PyProject));
+  Py_DECREF(values);
+  Py_DECREF(tmp);
+  Store_field(res,2,default_utility);
+  tmp = PyObject_GetAttrString(p,"quota");
+  Store_field(res,3,caml_copy_double(PyFloat_AsDouble(tmp)/100.0));
+  Py_DECREF(tmp);
+  tmp = PyObject_GetAttrString(p,"ballots");
+  values = PyDict_Values(tmp);
+  Store_field(res,4,ml_list_of_PyList(values,
+				      ml_ballot_of_PyBallot));
+  Py_DECREF(values);
+  Py_DECREF(tmp);
+  tmp = PyObject_GetAttrString(p,"roundToNearest");
+  Store_field(res,5,caml_copy_double(PyFloat_AsDouble(tmp)));
+  Py_DECREF(tmp);
+  CAMLreturn(res);
+}
+
+void
+PyElection_gets_ml_game(PyObject* p, value v)
+{
+  int i;
+  value mlitems;
+  PyObject* tmp;
+  PyObject* items;
+  tmp = PyObject_GetAttrString(p,"projects");
+  items = PyDict_Values(tmp);
+  mlitems = Field(v,1);
+  for (i = 0; i < PyList_Size(items); i++) {
+    PyProject_gets_ml_project(PyList_GetItem(items,i), Field(mlitems,0));
+    mlitems = Field(mlitems,1);
+  }
+  Py_DECREF(items);
+  Py_DECREF(tmp);
+
+  tmp = PyObject_GetAttrString(p,"ballots");
+  items = PyDict_Values(tmp);
+  mlitems = Field(v,4);
+  for (i = 0; i < PyList_Size(items); i++) {
+    PyBallot_gets_ml_ballot(PyList_GetItem(items,i), Field(mlitems,0));
+    mlitems = Field(mlitems,1);
+  }
+  Py_DECREF(items);
+  Py_DECREF(tmp);
+}
+
 
 static PyObject*
-pycamlmmv_back_and_forth(PyObject *self, PyObject *args)
+pycamlmmv_run_election(PyObject *self, PyObject *args)
 {
+  CAMLparam0();
+  CAMLlocal1(g);
+  static value * closure_f = NULL;
   PyObject* arg;
   if(!PyArg_ParseTuple(args, "O", &arg))
     return NULL;
+  
+  if (closure_f == NULL) {
+    /* First time around, look up by name */
+    closure_f = caml_named_value("run_election");
+  }
 
-  PyProject_gets_ml_project(arg,ml_project_of_PyProject(arg));
+  g = ml_game_of_PyElection(arg);
+  caml_callback(*closure_f, g);
+  PyElection_gets_ml_game(arg, g);
+
   Py_INCREF(arg);
-  return arg;
+  CAMLreturnT(PyObject*,arg);
 }
 
 static PyMethodDef PycamlmmvMethods[] = {
-  {"register_classes", pycamlmmv_register_classes, METH_VARARGS, ""},
-  {"back_and_forth", pycamlmmv_back_and_forth, METH_VARARGS, ""},
+  {"register_class", pycamlmmv_register_class, METH_VARARGS, ""},
+  {"run_election", pycamlmmv_run_election, METH_VARARGS, ""},
   {NULL, NULL, 0, NULL}
 };
 
 PyMODINIT_FUNC initpycamlmmv(void)
 {
   Py_InitModule("pycamlmmv", PycamlmmvMethods);
+  PyRun_SimpleString("import elections");
+  PyRun_SimpleString("import pycamlmmv");
+  PyRun_SimpleString("pycamlmmv.register_class(elections.FundingLevel)");
 }
