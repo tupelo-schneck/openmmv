@@ -15,9 +15,9 @@ OCAMLDEP = ocamldep
 OCAMLMKTOP = ocamlmktop
 
 MLFLAGS = -g -custom -I $(OBJ)
-MLLINKFLAGS = -cclib -lpython
+MLLINKFLAGS = -cclib -L/opt/local/lib -cclib -lpython2.5
 CFLAGS = -Wall -I /opt/local/lib/ocaml \
-  -I /System/Library/Frameworks/Python.framework/Versions/2.3/include/python2.3/
+  -I /opt/local/include/python2.5/
 
 vpath %.o $(OBJ)
 vpath %.cmi $(OBJ)
