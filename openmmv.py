@@ -4,6 +4,7 @@
 import sys, os, operator, string
 import wx, wx.grid
 import  wx.lib.mixins.listctrl  as  listmix
+from wx.lib.mixins import treemixin
 import elections
 
 class ProjectDialog(wx.Dialog):
@@ -92,6 +93,16 @@ class BallotListCtrl(wx.ListCtrl,
         
         listmix.TextEditMixin.__init__(self)
 
+class ProjectTreeCtrl(wx.TreeCtrl, treemixin.DragAndDrop):    
+    def OnDrop(self, dropItem, dragItem):
+        print dropItem, dragItem
+    
+    def OnBeginDrag(self, event):
+        Debug("begin mixin drag")
+    
+    def OnEndDrag(self, event):
+        Debug("end mixin drag")
+
 class Output:
     """
     This is used to capture stdout/stderr from the backend and send
@@ -176,6 +187,26 @@ class FieldValidator(wx.PyValidator):
 
         return
 
+class ProjectDropObject(wx.PyDataObjectSimple):
+    def __init__(self, projectId=None):
+        wx.PyDataObjectSimple.__init__(self, wx.CustomDataFormat('ProjectDD'))
+        self.data = ""
+        self.projectId = projectId
+    
+    def GetDataSize(self):
+        return len(self.data)
+    
+    def GetDataHere(self):
+        return self.data  # returns a string  
+    
+    def SetData(self, data):
+        self.data = data
+        return True
+
+class ProjectDropTarget(wx.PyDropTarget):
+    def OnData(self):
+        pass
+
 class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):        
         # begin wxGlade: MainFrame.__init__
@@ -235,8 +266,6 @@ class MainFrame(wx.Frame):
         self.label_5 = wx.StaticText(self.MainNotebook_pane_1, -1, "Round to Nearest: ")
         self.txtRound = wx.TextCtrl(self.MainNotebook_pane_1, -1, "", validator=FieldValidator(FLOAT_ONLY), style=wx.TE_PROCESS_ENTER)
         self.ballotsHead = wx.StaticText(self.MainNotebook_pane_1, -1, "Ballot ID of TOTAL - NAME")
-        self.treeProjects = wx.TreeCtrl(self.window_1_pane_1, -1, style=wx.TR_HAS_BUTTONS|wx.TR_DEFAULT_STYLE|wx.TR_HIDE_ROOT|wx.SUNKEN_BORDER)
-        self.listProjects = BallotListCtrl(self.window_1_pane_2, -1, style=wx.LC_REPORT|wx.SUNKEN_BORDER)
         self.gridBallot = wx.grid.Grid(self.notebookBallotAdvanced, -1, size=(1, 1))
         self.butFirstBallot = wx.Button(self.MainNotebook_pane_1, -1, "<< First")
         self.butPrevBallot = wx.Button(self.MainNotebook_pane_1, -1, "< Previous")
@@ -245,10 +274,16 @@ class MainFrame(wx.Frame):
         self.butLastBallot = wx.Button(self.MainNotebook_pane_1, -1, "Last >>")
         self.console = wx.TextCtrl(self.MainNotebook_console, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
 
+        # temporarily separated out so i can find and play with this for dnd
+        self.treeProjects = ProjectTreeCtrl(self.window_1_pane_1, -1, style=wx.TR_HAS_BUTTONS|wx.TR_DEFAULT_STYLE|wx.TR_HIDE_ROOT|wx.SUNKEN_BORDER)
+        self.listProjects = BallotListCtrl(self.window_1_pane_2, -1, style=wx.LC_REPORT|wx.SUNKEN_BORDER)
+
         self.__set_properties()
         self.__do_layout()
 
         wx.EVT_CLOSE(self, self.OnClose)
+        self.treeProjects.Bind(wx.EVT_TREE_BEGIN_DRAG, self.treeProjects.OnBeginDrag)
+        self.treeProjects.Bind(wx.EVT_TREE_END_DRAG, self.treeProjects.OnEndDrag)
         self.Bind(wx.EVT_MENU, self.OnNewElection, self.new_election)
         self.Bind(wx.EVT_MENU, self.OnLoadElection, self.load_election)
         self.Bind(wx.EVT_MENU, self.OnSaveElection, self.save_election)
@@ -373,9 +408,15 @@ class MainFrame(wx.Frame):
         self.SetSizer(sizer_1)
         sizer_1.Fit(self)
         sizer_1.SetSizeHints(self)
-        self.SetMinSize((450, 450))
+        self.SetMinSize((550, 450))
         self.Layout()
         # end wxGlade
+    
+    def onProjectBeginDrag(self, event):
+        Debug("drag began")
+    
+    def onProjectEndDrag(self, event):
+        Debug("drag ended")
     
     def AskToSave(self):
         if self.needToSave == True:
@@ -392,7 +433,7 @@ class MainFrame(wx.Frame):
             dlg = wx.MessageDialog(self,
                              'Current election will be discarded.  '
                              'Would you like to continue?',
-                             'Warning', wx.YES_NO | wx.ICON_INFORMATION)
+                             'Warning', wx.YES_NO | wx.ICON_WARNING)
             if dlg.ShowModal() == wx.ID_NO:
                 dlg.Destroy()
                 return False
@@ -449,7 +490,7 @@ class MainFrame(wx.Frame):
     def OnRunElection(self, event):
         if self.election == None:
             dlg = wx.MessageDialog(self,
-                             'No election to run!\n'
+                             'No election to run!\n\n'
                              'Please create an election first.',
                              'Warning', wx.OK | wx.ICON_WARNING)
             dlg.ShowModal()
@@ -576,6 +617,8 @@ class MainFrame(wx.Frame):
             self.election = elections.Election()
             self.needToSave = True
         val = self.txtElectionName.GetValue()
+        if self.election.name == str(val):
+            return
         self.election.name = str(val)
         self.needToSave = True
         Debug("new election value: name == %s" % self.election.name)
@@ -588,6 +631,8 @@ class MainFrame(wx.Frame):
         if val in [None, ""]:
             return
         try:
+            if float(val) == self.election.quota:
+                return
             self.election.quota = float(val)
             self.needToSave = True
             Debug("new election value: quota == %.2f" % self.election.quota)
@@ -607,6 +652,8 @@ class MainFrame(wx.Frame):
         if val in [None, ""]:
             return
         try:
+            if float(val) == self.election.totalResources:
+                return
             self.election.totalResources = float(val)
             self.needToSave = True
             Debug("new election value: resources == %.2f" % self.election.totalResources)
@@ -626,6 +673,8 @@ class MainFrame(wx.Frame):
         if val in [None, ""]:
             return
         try:
+            if float(val) == self.election.roundToNearest:
+                return
             self.election.roundToNearest = float(val)
             self.needToSave = True
             Debug("new election value: round == %.2f" % self.election.roundToNearest)
