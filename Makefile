@@ -5,7 +5,7 @@ CMODULES = pycamlmmv
 all: mmv pycamlmmv_module
 clean:
 	rm -rf bin obj
-	rm -f a.out *.pyc *.o *.so 
+	rm -f a.out *.pyc *.o *.so *.dll
 	rm -rf build
 
 CC = gcc
