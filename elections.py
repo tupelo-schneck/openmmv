@@ -239,18 +239,9 @@ class Election:
     
     def run_election(self):
         # FIXME: results should be stored in self.results in some format
-        input = self.pack_ocaml_election()
-        output = str(caml.product(2,2)) # call ocaml function here
-        self.results = self.unpack_ocaml_election(output)
+        import pycamlmmv
+        pycamlmmv.run_election(self)
     
-    def pack_ocaml_election(self):
-        """Packs election info into a string to by processed by ocaml"""
-        pass
-    
-    def unpack_ocaml_election(self, output):
-        """Unpack election results string returned from ocaml"""
-        return "You win! And 2 * 2 is %s." % output
-            
     def get_item_by_name(self, name, itemDict):
         """Search given itemDict for named item and return the instance"""
         try:

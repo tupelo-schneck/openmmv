@@ -348,8 +348,10 @@ static PyMethodDef PycamlmmvMethods[] = {
 
 PyMODINIT_FUNC initpycamlmmv(void)
 {
+  char* argv[] = {"<>"};
   Py_InitModule("pycamlmmv", PycamlmmvMethods);
   PyRun_SimpleString("import elections");
   PyRun_SimpleString("import pycamlmmv");
   PyRun_SimpleString("pycamlmmv.register_class(elections.FundingLevel)");
+  caml_startup(argv);
 }

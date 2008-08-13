@@ -53,3 +53,8 @@ CAMLprim value ml_python(value unit)
   /*  Py_Finalize();*/
   return Val_unit;
 }
+
+/* dummy function to allow linkage against modules that require this */
+void caml_startup(char** argv)
+{
+}
