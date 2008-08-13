@@ -17,31 +17,34 @@ OCAMLMKTOP = ocamlmktop -custom
 UNAME = $(shell uname)
 
 ifeq ($(UNAME),Darwin)
-PREFIX = /opt/local
-PYTHONLIBDIR = $(PREFIX)/lib
+PYTHONINCDIR = /opt/local/include/python2.5
+PYTHONLIBDIR = /opt/local/lib
+CAMLDIR = /opt/local/lib/ocaml
 SOLINK = MACOSX_DEPLOYMENT_TARGET=10.3 $(CC) -bundle -undefined dynamic_lookup -read_only_relocs suppress
-SOLINKLIBS = -L$(PREFIX)/lib/ocaml -lasmrun
+SOLINKLIBS = -L$(CAMLDIR) -lasmrun
 SOEXT = so
 else
-ifeq (CYGWIN,$(findstring CYGWIN,$(UNAME)))
-PREFIX = /usr
-PYTHONLIBDIR = $(PREFIX)/bin
+ifneq (,$(findstring CYGWIN,$(UNAME)))
+PYTHONINCDIR = /usr/include/python2.5
+PYTHONLIBDIR = /usr/bin
+CAMLDIR = /usr/lib/ocaml
 SOLINK = $(CC) -shared
-SOLINKLIBS = -L$(PREFIX)/lib/ocaml -lasmrun -L$(PYTHONLIBDIR) -lpython2.5
+SOLINKLIBS = -L$(CAMLDIR) -lasmrun -L$(PYTHONLIBDIR) -lpython2.5
 SOEXT = dll
 else
-PREFIX = /usr
-PYTHONLIBDIR = $(PREFIX)/lib
+# Linux
+PYTHONINCDIR = /usr/include/python2.5
+PYTHONLIBDIR = /usr/lib
+CAMLDIR = /usr/lib/ocaml/3.10.0
 SOLINK = $(CC) -shared
-SOLINKLIBS = -L$(PREFIX)/lib/ocaml -lasmrun -L$(PYTHONLIBDIR) -lpython2.5
+SOLINKLIBS = -L$(CAMLDIR) -lasmrun -L$(PYTHONLIBDIR) -lpython2.5
 SOEXT = so
 endif
 endif
 
 MLFLAGS = -I obj
 MLLINKFLAGS = -cclib -L$(PYTHONLIBDIR) -cclib -lpython2.5
-CFLAGS = -Wall -I $(PREFIX)/lib/ocaml \
-  -I $(PREFIX)/include/python2.5/
+CFLAGS = -Wall -I $(CAMLDIR) -I $(PYTHONINCDIR)
 
 vpath mmv bin
 vpath %.o obj
