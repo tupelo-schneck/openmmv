@@ -4,6 +4,12 @@
 #include <caml/memory.h>
 #include <caml/callback.h>
 
+#define CAMLreturnT(type, result) do{ \
+  type caml__temp_result = (result); \
+  caml_local_roots = caml__frame; \
+  return (caml__temp_result); \
+}while(0)
+
 PyObject* class_FundingLevel;
 value default_utility;
 
