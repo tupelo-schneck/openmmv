@@ -92,6 +92,28 @@ class BallotListCtrl(wx.ListCtrl,
         self.SetColumnWidth(2, wx.LIST_AUTOSIZE)
         
         listmix.TextEditMixin.__init__(self)
+    
+    def SetStringItem(self, index, col, data):
+        # FIXME: this function just doesn't work yet...
+##        dataId = self.GetItemData(index)
+##        Debug("dataId => %s" % dataId)
+##        item = MainFrame.listDataDict[dataId]
+##        Debug("SetStringItem: item => %s" % item)
+##        oldRank = self.getColumnText(index, 1)
+        wx.ListCtrl.SetStringItem(self, index, col, data)
+##        newRank = self.getColumnText(index, 1)
+##        item.proposedFunding = self.getColumnText(index, 2)
+##        ballot = MainFrame.election.ballots[MainFrame.currentBallot]
+##        ballot.change_rank(item, oldRank, newRank)
+        Debug("SetStringItem: %s, %s, %s, %s\n" %
+                           (index,
+                            self.GetItemText(index),
+                            self.getColumnText(index, 1),
+                            self.getColumnText(index, 2)))
+    
+    def getColumnText(self, index, col):
+        item = self.GetItem(index, col)
+        return item.GetText()
 
 class ProjectTreeCtrl(wx.TreeCtrl, treemixin.DragAndDrop):    
     def OnDrop(self, dropItem, dragItem):
@@ -119,6 +141,75 @@ DIGIT_ONLY = 2
 FLOAT_ONLY = 3
 
 class FieldValidator(wx.PyValidator):
+    def __init__(self, flag=None, pyVar=None):
+        wx.PyValidator.__init__(self)
+        self.flag = flag
+        self.dotted = False
+        self.Bind(wx.EVT_CHAR, self.OnChar)
+
+    def Clone(self):
+        return FieldValidator(self.flag)
+
+    def Validate(self, win):
+        tc = self.GetWindow()
+        val = tc.GetValue()
+        
+        if self.flag == ALPHA_ONLY:
+            for x in val:
+                if x not in string.letters:
+                    return False
+
+        elif self.flag == DIGIT_ONLY:
+            for x in val:
+                if x not in string.digits:
+                    return False
+
+        elif self.flag == FLOAT_ONLY:
+            for x in val:
+                if x not in string.digits + ".":
+                    return False
+                if x == ".":
+                    if self.dotted == False:
+                        self.dotted = True
+                    else:
+                        return False
+
+        return True
+
+
+    def OnChar(self, event):
+        key = event.GetKeyCode()
+
+        if key < wx.WXK_SPACE or key == wx.WXK_DELETE or key > 255:
+            event.Skip()
+            return
+
+        if self.flag == ALPHA_ONLY and chr(key) in string.letters:
+            event.Skip()
+            return
+
+        if self.flag == DIGIT_ONLY and chr(key) in string.digits:
+            event.Skip()
+            return
+
+        if self.flag == FLOAT_ONLY and chr(key) in string.digits + ".":
+            if chr(key) == ".":                
+                if self.dotted == False:
+                    self.dotted = True
+                    event.Skip()
+                    return
+                else:
+                    pass
+            else:
+                event.Skip()
+                return
+
+        if not wx.Validator_IsSilent():
+            wx.Bell()
+
+        return
+
+class ListCtrlValidator(wx.PyValidator):
     def __init__(self, flag=None, pyVar=None):
         wx.PyValidator.__init__(self)
         self.flag = flag
@@ -276,6 +367,7 @@ class MainFrame(wx.Frame):
 
         # temporarily separated out so i can find and play with this for dnd
         self.treeProjects = ProjectTreeCtrl(self.window_1_pane_1, -1, style=wx.TR_HAS_BUTTONS|wx.TR_DEFAULT_STYLE|wx.TR_HIDE_ROOT|wx.SUNKEN_BORDER)
+        # needs validator > validator=ListCtrlValidator(FLOAT_ONLY)
         self.listProjects = BallotListCtrl(self.window_1_pane_2, -1, style=wx.LC_REPORT|wx.SUNKEN_BORDER)
 
         self.__set_properties()
@@ -284,6 +376,8 @@ class MainFrame(wx.Frame):
         wx.EVT_CLOSE(self, self.OnClose)
         self.treeProjects.Bind(wx.EVT_TREE_BEGIN_DRAG, self.treeProjects.OnBeginDrag)
         self.treeProjects.Bind(wx.EVT_TREE_END_DRAG, self.treeProjects.OnEndDrag)
+        self.treeProjects.Bind(wx.EVT_LEFT_DCLICK, self.onTreeDClick)
+        self.Bind(wx.EVT_LIST_BEGIN_LABEL_EDIT, self.OnBeginEditProjectList, self.listProjects)
         self.Bind(wx.EVT_MENU, self.OnNewElection, self.new_election)
         self.Bind(wx.EVT_MENU, self.OnLoadElection, self.load_election)
         self.Bind(wx.EVT_MENU, self.OnSaveElection, self.save_election)
@@ -316,6 +410,7 @@ class MainFrame(wx.Frame):
         self.currentBallot = None
         self.needToSave = False
         self.debug = True
+        self.listDataDict = {}
         
         # hook up console
         self.output = Output(self.console)
@@ -411,6 +506,31 @@ class MainFrame(wx.Frame):
         self.SetMinSize((550, 450))
         self.Layout()
         # end wxGlade
+    
+    def onTreeDClick(self, event):
+        item = self.treeProjects.GetSelection()
+        project = self.treeProjects.GetPyData(item)
+        # add ballotItem to ballot's ballotItems dict
+        # default rank == -1, default fundingLevel == 0.00
+        ballotItem = elections.BallotItem(project.id, 0.00)
+        ballot = self.election.ballots[self.currentBallot]
+        try:
+            ballot.ballotItems[-1].append(ballotItem)
+        except KeyError:
+            ballot.ballotItems[-1] = [ballotItem]
+        # add project to listctrl
+        index = self.listProjects.InsertStringItem(sys.maxint, str(project.id))
+        self.listProjects.SetStringItem(index, 0, "-1")
+        self.listProjects.SetStringItem(index, 1, str(project.name))
+        self.listProjects.SetStringItem(index, 2, "%.2f" % 0.00)
+        self.listProjects.SetItemData(index, project.id)
+    
+    def OnBeginEditProjectList(self, event):
+        if event.m_col == 1:
+            Debug("OnBeginEditProjectList: vetoing edit")
+            event.Veto()
+            return
+        event.Skip()
     
     def onProjectBeginDrag(self, event):
         Debug("drag began")
@@ -703,13 +823,18 @@ class MainFrame(wx.Frame):
             child = self.treeProjects.AppendItem(root, "%s" % v.name)
             self.treeProjects.SetPyData(child, v)
         # fill in ballot vote list control
-        for id, item in ballot.ballotItems.iteritems():
-            for v in item:
-                index = self.listProjects.InsertStringItem(sys.maxint, str(id))
-                self.listProjects.SetStringItem(index, 0, str(id))
-                self.listProjects.SetStringItem(index, 1, str(self.election.projects[v.projectId].name))
-                self.listProjects.SetStringItem(index, 2, "%.2f" % v.proposedFunding)
-                self.listProjects.SetItemData(index, id)
+        for rank, items in ballot.ballotItems.iteritems():
+            for item in items:
+                Debug("item: %s" % item)
+                dataId = wx.NewId()
+                self.listDataDict[dataId] = item
+                Debug("listData id# %i => %s" %(dataId, item))
+                index = self.listProjects.InsertStringItem(sys.maxint, str(rank))
+                self.listProjects.SetItemData(index, dataId)
+                Debug("new item data => %s" % self.listProjects.GetItemData(index))
+                self.listProjects.SetStringItem(index, 0, str(rank))
+                self.listProjects.SetStringItem(index, 1, str(self.election.projects[item.projectId].name))
+                self.listProjects.SetStringItem(index, 2, "%.2f" % item.proposedFunding)
         self.listProjects.currentItem = 0
         self.listProjects.SetColumnWidth(0, 50)
         self.listProjects.SetColumnWidth(1, wx.LIST_AUTOSIZE)
@@ -728,21 +853,21 @@ class MainFrame(wx.Frame):
     
     def PopulateBallot(self, id):
         Debug("populating ballot id = %d" % id)
-        try:
-            b = self.election.ballots[id]
-            self.PopulateBallotAdvanced(b)
-            self.PopulateBallotSimple(b)
-            bid = b.id + 1
-            name = b.name
-            total = len(self.election.ballots)
-            self.ballotsHead.SetLabel("Ballot %d of %d - %s" % (bid, total, name))
-            self.currentBallot = id
-        except KeyError:
-            Debug("No ballots in current election.")
-            self.ballotsHead.SetLabel("Ballot 0 of 0")
-            self.gridBallot.ClearGrid()
-            self.listProjects.DeleteAllItems()
-            self.treeProjects.DeleteAllItems()
+##        try:
+        self.currentBallot = id
+        b = self.election.ballots[id]
+        self.PopulateBallotAdvanced(b)
+        self.PopulateBallotSimple(b)
+        bid = b.id + 1
+        name = b.name
+        total = len(self.election.ballots)
+        self.ballotsHead.SetLabel("Ballot %d of %d - %s" % (bid, total, name))
+##        except KeyError:
+##            Debug("No ballots in current election.")
+##            self.ballotsHead.SetLabel("Ballot 0 of 0")
+##            self.gridBallot.ClearGrid()
+##            self.listProjects.DeleteAllItems()
+##            self.treeProjects.DeleteAllItems()
         
     def Populate(self):
         """Populate gui with data from loaded election"""

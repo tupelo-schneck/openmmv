@@ -58,7 +58,7 @@ class BallotItem:
         self.voterFunding = None    # voter's share of total funding
     
     def __str__(self):
-        return "Fund %i at %.2f" % (self.projectId, self.proposedFunding)
+        return "Fund Project #%i at %.2f" % (self.projectId, self.proposedFunding)
 
 class Ballot:
     """
@@ -74,6 +74,19 @@ class Ballot:
     
     def __str__(self):
         return self.name
+    
+    def change_rank(self, item, oldRank, newRank):
+        """Change rank of given ballotItem"""
+        # add to new rank
+        try:
+            self.ballotItems[newRank].append(item)
+        except KeyError:
+            self.ballotItems[newRank] = [item]
+        # remove from old rank
+        try:
+            self.ballotItems[oldRank].remove(item)
+        except:
+            Debug("change BI rank error: oldRank invalid")
     
     def create_nest_list(self):
         """Creates a list of lists of BallotItems, ordered by rank"""
@@ -108,14 +121,18 @@ class Election:
     roundToNearest (float)  - smallest change in resources we care about
     results (TBD)   - results in some format i haven't decided on yet
     """
-    name = ""
-    ballots = {}    # {id: Ballot instance}
-    projects = {}   # {id: Project instance}
-    categories = {} # {id: Cateory instance}
-    totalResources = 0.0
-    quota = 0.0
-    roundToNearest = 0.0
-    results = None
+    
+    def __init__(self, bltp=None):
+        self.name = ""
+        self.ballots = {}    # {id: Ballot instance}
+        self.projects = {}   # {id: Project instance}
+        self.categories = {} # {id: Cateory instance}
+        self.totalResources = 0.0
+        self.quota = 0.0
+        self.roundToNearest = 0.0
+        self.results = None
+        if bltp is not None:
+            self.import_bltp(bltp)
     
     def reset(self):
         self.name = ""
