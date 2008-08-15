@@ -580,7 +580,9 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             return
         name = dlg.GetValue()
-        dlg.Destroy()
+        dlg.Destroy()        
+        self.listProjects.DeleteAllItems()
+        self.treeProjects.DeleteAllItems()
         self.election = elections.Election()
         self.election.name = name
         Debug("Started new election.")
@@ -627,13 +629,7 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             return
         self.election.run_election()
-        # display self.election.results in new tab on main notebook
-##        self.MainNotebook_results = wx.Panel(self.MainNotebook, -1)
-##        self.ResultsConsole = wx.TextCtrl(self.MainNotebook_results, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
-##        sizer_results = wx.BoxSizer(wx.HORIZONTAL)
-##        sizer_results.Add(self.ResultsConsole, 1, wx.EXPAND, 0)
-##        self.MainNotebook_results.SetSizer(sizer_results)
-        self.MainNotebook.AddPage(self.ResultsConsole, 'Election Results')
+        # display self.election.results in results tab on main notebook
         self.ResultsConsole.AppendText("%s" % self.election.results)
         Debug("%s" % self.election.results)
 
@@ -878,21 +874,21 @@ class MainFrame(wx.Frame):
     
     def PopulateBallot(self, id):
         Debug("populating ballot id = %d" % id)
-##        try:
-        self.currentBallot = id
-        b = self.election.ballots[id]
-        self.PopulateBallotAdvanced(b)
-        self.PopulateBallotSimple(b)
-        bid = b.id + 1
-        name = b.name
-        total = len(self.election.ballots)
-        self.ballotsHead.SetLabel("Ballot %d of %d - %s" % (bid, total, name))
-##        except KeyError:
-##            Debug("No ballots in current election.")
-##            self.ballotsHead.SetLabel("Ballot 0 of 0")
-##            self.gridBallot.ClearGrid()
-##            self.listProjects.DeleteAllItems()
-##            self.treeProjects.DeleteAllItems()
+        try:
+            self.currentBallot = id
+            b = self.election.ballots[id]
+            self.PopulateBallotAdvanced(b)
+            self.PopulateBallotSimple(b)
+            bid = b.id + 1
+            name = b.name
+            total = len(self.election.ballots)
+            self.ballotsHead.SetLabel("Ballot %d of %d - %s" % (bid, total, name))
+        except KeyError:
+            Debug("No ballots in current election.")
+            self.ballotsHead.SetLabel("Ballot 0 of 0")
+            self.gridBallot.ClearGrid()
+            self.listProjects.DeleteAllItems()
+            self.treeProjects.DeleteAllItems()
         
     def Populate(self):
         """Populate gui with data from loaded election"""

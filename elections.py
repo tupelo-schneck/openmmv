@@ -285,7 +285,10 @@ class Election:
         # create self.results
         r = []
         for project in self.projects.values():
-            topLevel = project.fundings[-1]
+            try:
+                topLevel = project.fundings[-1]
+            except:
+                continue
             if topLevel.support > (self.quota / 100):
                 funding = (project.id, project.name, topLevel.amount)
                 r.append(funding)

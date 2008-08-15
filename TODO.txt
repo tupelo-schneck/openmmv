@@ -3,6 +3,5 @@ TODO:
 * figure out elections results display
 * hook up all results-related menu events
 * implement drag and drop in advanced ballot view
-* limit ballot editing to "funding proposals" and "rank" columns only
 * validate all input
 ** implement ListCtrlValidator and hook into listProjects
