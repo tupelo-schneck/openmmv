@@ -815,17 +815,24 @@ class MainFrame(wx.Frame):
         self.treeProjects.DeleteAllItems()
         # Fill in availble projects tree
         catIdDict = {}
-        root = self.treeProjects.AddRoot("Categories")
-        dict = sorted(self.election.categories.values(), key=operator.attrgetter("name"))
-        for v in dict:
-            child = self.treeProjects.AppendItem(root, "%s" % v.name)
-            self.treeProjects.SetPyData(child, v)
-            catIdDict[v.id] = child
-        dict = sorted(self.election.projects.values(), key=operator.attrgetter("name"))
-        for v in dict:
-            root = catIdDict[v.category]
-            child = self.treeProjects.AppendItem(root, "%s" % v.name)
-            self.treeProjects.SetPyData(child, v)
+        root = self.treeProjects.AddRoot("Root")
+        if len(self.election.categories) > 0:
+            dict = sorted(self.election.categories.values(), key=operator.attrgetter("name"))
+            for v in dict:
+                child = self.treeProjects.AppendItem(root, "%s" % v.name)
+                self.treeProjects.SetPyData(child, v)
+                catIdDict[v.id] = child
+            dict = sorted(self.election.projects.values(), key=operator.attrgetter("name"))
+            for v in dict:
+                root = catIdDict[v.category]
+                child = self.treeProjects.AppendItem(root, "%s" % v.name)
+                self.treeProjects.SetPyData(child, v)
+        elif len(self.election.categories) == 0:
+            # case for uncategorized projects
+            dict = sorted(self.election.projects.values(), key=operator.attrgetter("name"))
+            for v in dict:
+                child = self.treeProjects.AppendItem(root, "%s" % v.name)
+                self.treeProjects.SetPyData(child, v)
         # fill in ballot vote list control
         for rank, items in ballot.ballotItems.iteritems():
             for item in items:
