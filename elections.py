@@ -10,9 +10,9 @@ class FundingLevel:
     nweSupport (float)  - A holding variable used during vote counting
     """
     def __init__(self, amount, support, prevSupport=None):
-        self.amount = amount
-        self.support = support
-        self.prevSupport = prevSupport
+        self.amount = float(amount)
+        self.support = float(support)
+        self.prevSupport = float(prevSupport)
 
 class Project:
     """
@@ -28,12 +28,12 @@ class Project:
                                Generally generated as election is run
     """
     def __init__(self, id, name, min, max, cat=0, elim=float("inf"), fund=[]):
-        self.id = id
-        self.name = name
-        self.minimumBudget = min
-        self.maximumBudget = max
-        self.category = cat
-        self.eliminated = elim
+        self.id = int(id)
+        self.name = str(name)
+        self.minimumBudget = float(min)
+        self.maximumBudget = float(max)
+        self.category = int(cat)
+        self.eliminated = float(elim)
         self.fundings = fund
     
     def __str__(self):
@@ -50,12 +50,12 @@ class BallotItem:
     voterFunding (float)        - How much voter support gives at this funding level
     """
     def __init__(self, id, funding):
-        self.projectId = id
-        self.proposedFunding = funding
-        self.priorProposedFunding = None  # FIXME: write a function to figure this out
-        self.actualTotalFunding = None  # as determined by program
-        self.voterSupport = None    # voter's share of total support
-        self.voterFunding = None    # voter's share of total funding
+        self.projectId = int(id)
+        self.proposedFunding = float(funding)
+        self.priorProposedFunding = None
+        self.actualTotalFunding = None
+        self.voterSupport = None
+        self.voterFunding = None
     
     def __str__(self):
         return "Fund Project #%i at %.2f" % (self.projectId, self.proposedFunding)
@@ -68,7 +68,7 @@ class Ballot:
     ballotItems (dict)  - dict of lists of BallotItem instances.  Keyed by rank (int)
     """
     def __init__(self, id, name=""):
-        self.id = id
+        self.id = int(id)
         self.name = str(name)
         self.ballotItems = {}
     
@@ -77,6 +77,8 @@ class Ballot:
     
     def change_rank(self, item, oldRank, newRank):
         """Change rank of given ballotItem"""
+        oldRank = int(oldRank)
+        newRank = int(newRank)
         # add to new rank
         try:
             self.ballotItems[newRank].append(item)
@@ -86,7 +88,7 @@ class Ballot:
         try:
             self.ballotItems[oldRank].remove(item)
         except:
-            Debug("change BI rank error: oldRank invalid")
+            print "change BI rank error: oldRank invalid"
     
     def create_nest_list(self):
         """Creates a list of lists of BallotItems, ordered by rank"""
@@ -104,7 +106,7 @@ class Category:
     name (str)  - category name
     """
     def __init__(self, id, name=""):
-        self.id = id
+        self.id = int(id)
         self.name = str(name)
     
     def __str__(self):

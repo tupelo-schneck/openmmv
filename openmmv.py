@@ -94,17 +94,19 @@ class BallotListCtrl(wx.ListCtrl,
         listmix.TextEditMixin.__init__(self)
     
     def SetStringItem(self, index, col, data):
-        # FIXME: this function just doesn't work yet...
-##        dataId = self.GetItemData(index)
-##        Debug("dataId => %s" % dataId)
-##        item = MainFrame.listDataDict[dataId]
-##        Debug("SetStringItem: item => %s" % item)
-##        oldRank = self.getColumnText(index, 1)
+        litem = self.GetItem(index)
+        dataId = litem.GetData()
+        item = MainFrame.listDataDict[dataId]
+        Debug("SetStringItem: item => %s" % item)
+        oldRank = self.getColumnText(index, 0)
         wx.ListCtrl.SetStringItem(self, index, col, data)
-##        newRank = self.getColumnText(index, 1)
-##        item.proposedFunding = self.getColumnText(index, 2)
-##        ballot = MainFrame.election.ballots[MainFrame.currentBallot]
-##        ballot.change_rank(item, oldRank, newRank)
+        newRank = self.getColumnText(index, 0)
+        if MainFrame.needUpdateBallotList == True:
+            item.proposedFunding = float(self.getColumnText(index, 2))
+            ballot = MainFrame.election.ballots[MainFrame.currentBallot]
+            if oldRank != newRank:
+                ballot.change_rank(item, oldRank, newRank)
+            MainFrame.needUpdateBallotList = False
         Debug("SetStringItem: %s, %s, %s, %s\n" %
                            (index,
                             self.GetItemText(index),
@@ -411,6 +413,7 @@ class MainFrame(wx.Frame):
         self.needToSave = False
         self.debug = True
         self.listDataDict = {}
+        self.needUpdateBallotList = False
         
         # hook up console
         self.output = Output(self.console)
@@ -530,6 +533,7 @@ class MainFrame(wx.Frame):
             Debug("OnBeginEditProjectList: vetoing edit")
             event.Veto()
             return
+        self.needUpdateBallotList = True
         event.Skip()
     
     def onProjectBeginDrag(self, event):
