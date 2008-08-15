@@ -94,7 +94,8 @@ class Ballot:
         keys = self.ballotItems.keys()
         keys.sort()
         for key in keys:
-            itemsFinal.append(self.ballotItems[key])
+            itemsFinal.append(self.ballotItems[key])        
+        return itemsFinal
             
 class Category:
     """
