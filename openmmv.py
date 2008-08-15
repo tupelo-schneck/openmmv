@@ -507,7 +507,7 @@ class MainFrame(wx.Frame):
         self.MainNotebook_results.SetSizer(sizer_results)
         self.MainNotebook.AddPage(self.MainNotebook_pane_1, "Current Election")
         self.MainNotebook.AddPage(self.MainNotebook_console, "Console")
-        self.MainNotebook.AddPage(self.ResultsConsole, 'Election Results')
+        self.MainNotebook.AddPage(self.MainNotebook_results, 'Election Results')
         sizer_1.Add(self.MainNotebook, 1, wx.EXPAND, 0)
         self.SetSizer(sizer_1)
         sizer_1.Fit(self)
