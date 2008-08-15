@@ -13,6 +13,9 @@ class FundingLevel:
         self.amount = float(amount)
         self.support = float(support)
         self.prevSupport = float(prevSupport)
+    
+    def __str__(self):
+        return "%.2f support at $%.2f" % (self.support, self.amount)
 
 class Project:
     """
@@ -112,6 +115,22 @@ class Category:
     def __str__(self):
         return self.name
 
+class Results:
+    """
+    Results of an election.  This is a class mostly to take advantage of the
+    string formatting functions of python.  Variables include:
+    list (list)     - list of (project ID, project name, final funding) tuples
+    """
+    
+    def __init__(self, list):
+        self.list = list
+    
+    def __str__(self):
+        str = "-----ELECTION RESULTS-----\nProject\t\t\tFunding Level\n"
+        for p in self.list:
+            str += "%s\t\t\t%.2f\n" % (p[1], p[2])
+        return str
+
 class Election:
     """
     An election, including functions to run said election.  Variables include:
@@ -122,7 +141,7 @@ class Election:
     totalResources (float)  - total amount of money to be allocated
     quota (float)   - number of votes a project needs to get funded
     roundToNearest (float)  - smallest change in resources we care about
-    results (TBD)   - results in some format i haven't decided on yet
+    results (Results instance)   - a results instance of outcome of current election
     """
     
     def __init__(self, bltp=None):
@@ -159,7 +178,7 @@ class Election:
         self.name = str(line[3])
         print "Imported resources, quota, rounding info, and name."
         
-        print "Import categories..."
+        print "Importing categories..."
         line = f.readline().strip()
         while line != "--START PROJECTS--":
             k, v = line.split(" ", 1)
@@ -258,9 +277,19 @@ class Election:
         f.close()
     
     def run_election(self):
-        # FIXME: results should be stored in self.results in some format
         import pycamlmmv
         pycamlmmv.run_election(self)
+        self.store_results()
+    
+    def store_results(self):
+        # create self.results
+        r = []
+        for project in self.projects.values():
+            topLevel = project.fundings[-1]
+            if topLevel.support > (self.quota / 100):
+                funding = (project.id, project.name, topLevel.amount)
+                r.append(funding)
+        self.results = Results(r)
     
     def get_item_by_name(self, name, itemDict):
         """Search given itemDict for named item and return the instance"""

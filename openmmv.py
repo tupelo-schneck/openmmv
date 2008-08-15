@@ -307,6 +307,7 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.MainNotebook = wx.Notebook(self, -1, style=0)
         self.MainNotebook_console = wx.Panel(self.MainNotebook, -1)
+        self.MainNotebook_results = wx.Panel(self.MainNotebook, -1)
         self.MainNotebook_pane_1 = wx.Panel(self.MainNotebook, -1)
         self.panel_1 = wx.ScrolledWindow(self.MainNotebook_pane_1, -1, style=wx.TAB_TRAVERSAL)
         self.notebookBallot = wx.Notebook(self.panel_1, -1, style=0)
@@ -366,8 +367,9 @@ class MainFrame(wx.Frame):
         self.butNextBallot = wx.Button(self.MainNotebook_pane_1, -1, "Next >")
         self.butLastBallot = wx.Button(self.MainNotebook_pane_1, -1, "Last >>")
         self.console = wx.TextCtrl(self.MainNotebook_console, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+        self.ResultsConsole = wx.TextCtrl(self.MainNotebook_results, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
 
-        # temporarily separated out so i can find and play with this for dnd
+        # temporarily separated out so i can find and play with these for dnd
         self.treeProjects = ProjectTreeCtrl(self.window_1_pane_1, -1, style=wx.TR_HAS_BUTTONS|wx.TR_DEFAULT_STYLE|wx.TR_HIDE_ROOT|wx.SUNKEN_BORDER)
         # needs validator > validator=ListCtrlValidator(FLOAT_ONLY)
         self.listProjects = BallotListCtrl(self.window_1_pane_2, -1, style=wx.LC_REPORT|wx.SUNKEN_BORDER)
@@ -444,6 +446,7 @@ class MainFrame(wx.Frame):
         # begin wxGlade: MainFrame.__do_layout
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         sizer_3 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_results = wx.BoxSizer(wx.HORIZONTAL)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_4 = wx.BoxSizer(wx.VERTICAL)
         sizer_5 = wx.BoxSizer(wx.HORIZONTAL)
@@ -500,8 +503,11 @@ class MainFrame(wx.Frame):
         self.MainNotebook_pane_1.SetSizer(sizer_2)
         sizer_3.Add(self.console, 1, wx.EXPAND, 0)
         self.MainNotebook_console.SetSizer(sizer_3)
+        sizer_results.Add(self.ResultsConsole, 1, wx.EXPAND, 0)
+        self.MainNotebook_results.SetSizer(sizer_results)
         self.MainNotebook.AddPage(self.MainNotebook_pane_1, "Current Election")
         self.MainNotebook.AddPage(self.MainNotebook_console, "Console")
+        self.MainNotebook.AddPage(self.ResultsConsole, 'Election Results')
         sizer_1.Add(self.MainNotebook, 1, wx.EXPAND, 0)
         self.SetSizer(sizer_1)
         sizer_1.Fit(self)
@@ -621,7 +627,15 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             return
         self.election.run_election()
-        Debug(self.election.results)
+        # display self.election.results in new tab on main notebook
+##        self.MainNotebook_results = wx.Panel(self.MainNotebook, -1)
+##        self.ResultsConsole = wx.TextCtrl(self.MainNotebook_results, -1, "", style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+##        sizer_results = wx.BoxSizer(wx.HORIZONTAL)
+##        sizer_results.Add(self.ResultsConsole, 1, wx.EXPAND, 0)
+##        self.MainNotebook_results.SetSizer(sizer_results)
+        self.MainNotebook.AddPage(self.ResultsConsole, 'Election Results')
+        self.ResultsConsole.AppendText("%s" % self.election.results)
+        Debug("%s" % self.election.results)
 
     def OnSaveHtml(self, event): # wxGlade: MainFrame.<event_handler>
         Debug("Event handler `OnSaveHtml' not implemented!")
