@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import operator
+#import pycamlmmv
 
 class FundingLevel:
     """
@@ -129,6 +130,7 @@ class Results:
         str = "-----ELECTION RESULTS-----\nProject\t\t\tFunding Level\n"
         for p in self.list:
             str += "%s\t\t\t%.2f\n" % (p[1], p[2])
+        str += "\n\n"
         return str
 
 class Election:
@@ -179,6 +181,9 @@ class Election:
         print "Imported resources, quota, rounding info, and name."
         
         print "Importing categories..."
+        # first, create "None" category
+        self.categories[0] = Category(0, "None")
+        # then read in other categories
         line = f.readline().strip()
         while line != "--START PROJECTS--":
             k, v = line.split(" ", 1)
@@ -253,6 +258,8 @@ class Election:
                 % (self.totalResources, self.quota, self.roundToNearest, self.name))
         print "Saving Categories..."
         for k, v in self.categories.iteritems():
+            if k == 0:
+                continue
             f.write("%i %s\n" % (k, v.name))
             print "Category %s saved." % v.name
         print "Saving Projects..."
@@ -292,7 +299,11 @@ class Election:
             if topLevel.support > (self.quota / 100):
                 funding = (project.id, project.name, topLevel.amount)
                 r.append(funding)
+        print "before: \n%s" % self.results
+        self.results = None
+        print "none: \n%s" % self.results
         self.results = Results(r)
+        print "after: \n%s" % self.results
     
     def get_item_by_name(self, name, itemDict):
         """Search given itemDict for named item and return the instance"""

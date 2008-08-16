@@ -631,7 +631,6 @@ class MainFrame(wx.Frame):
         self.election.run_election()
         # display self.election.results in results tab on main notebook
         self.ResultsConsole.AppendText("%s" % self.election.results)
-        Debug("%s" % self.election.results)
 
     def OnSaveHtml(self, event): # wxGlade: MainFrame.<event_handler>
         Debug("Event handler `OnSaveHtml' not implemented!")
@@ -672,7 +671,10 @@ class MainFrame(wx.Frame):
             return
         name = dlg.txtName.GetValue()
         catName = dlg.listCategories.GetStringSelection()
-        cat = self.election.get_item_by_name(catName, self.election.categories)
+        if catName == "":
+            cat = self.election.categories[0]
+        else:
+            cat = self.election.get_item_by_name(catName, self.election.categories)
         min = float(dlg.txtMin.GetValue())
         max = float(dlg.txtMax.GetValue())
         dlg.Destroy()
@@ -826,22 +828,28 @@ class MainFrame(wx.Frame):
         # Fill in availble projects tree
         catIdDict = {}
         root = self.treeProjects.AddRoot("Root")
-        if len(self.election.categories) > 0:
+        if len(self.election.categories) == 1 and 0 in self.election.categories.keys():
+            # if there are no categories except "None"...
+            dict = sorted(self.election.projects.values(), key=operator.attrgetter("name"))
+            for v in dict:
+                child = self.treeProjects.AppendItem(root, "%s" % v.name)
+                self.treeProjects.SetPyData(child, v)
+        else:
+            # multiple categories, including "None"
             dict = sorted(self.election.categories.values(), key=operator.attrgetter("name"))
             for v in dict:
+                if v.id == 0:
+                    continue
                 child = self.treeProjects.AppendItem(root, "%s" % v.name)
                 self.treeProjects.SetPyData(child, v)
                 catIdDict[v.id] = child
             dict = sorted(self.election.projects.values(), key=operator.attrgetter("name"))
             for v in dict:
-                root = catIdDict[v.category]
-                child = self.treeProjects.AppendItem(root, "%s" % v.name)
-                self.treeProjects.SetPyData(child, v)
-        elif len(self.election.categories) == 0:
-            # case for uncategorized projects
-            dict = sorted(self.election.projects.values(), key=operator.attrgetter("name"))
-            for v in dict:
-                child = self.treeProjects.AppendItem(root, "%s" % v.name)
+                if v.category == 0:
+                    proot = root
+                else:
+                    proot = catIdDict[v.category]
+                child = self.treeProjects.AppendItem(proot, "%s" % v.name)
                 self.treeProjects.SetPyData(child, v)
         # fill in ballot vote list control
         for rank, items in ballot.ballotItems.iteritems():

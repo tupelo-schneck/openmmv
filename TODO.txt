@@ -1,7 +1,9 @@
 TODO:
 
-* figure out elections results display
+* make elections results display look nicer
 * hook up all results-related menu events
-* implement drag and drop in advanced ballot view
+* implement drag and drop in advanced ballot view?
 * validate all input
 ** implement ListCtrlValidator and hook into listProjects
+*** make sure proposedFunding is within min/max
+* maybe add optional "comfy" funding level to projects?
