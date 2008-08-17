@@ -46,7 +46,7 @@ MLFLAGS = -I obj
 MLLINKFLAGS = -cclib -L$(PYTHONLIBDIR) -cclib -lpython2.5
 CFLAGS = -Wall -I $(CAMLDIR) -I $(PYTHONINCDIR)
 
-vpath mmv bin
+vpath mmv% bin
 vpath %.o obj
 vpath %.cmi obj
 vpath %.cmo obj

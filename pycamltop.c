@@ -8,7 +8,7 @@ extern void initpycamlmmv();
 static int done;
 
 static PyObject*
-pycaml_ocaml(PyObject *self, PyObject *args)
+pycamltop_ocaml(PyObject *self, PyObject *args)
 {
   if(!PyArg_ParseTuple(args, ""))
     return NULL;
@@ -18,8 +18,8 @@ pycaml_ocaml(PyObject *self, PyObject *args)
   return Py_None;
 }
 
-static PyMethodDef PycamlMethods[] = {
-  {"ocaml", pycaml_ocaml, METH_VARARGS, ""},
+static PyMethodDef PycamltopMethods[] = {
+  {"ocaml", pycamltop_ocaml, METH_VARARGS, ""},
   {NULL, NULL, 0, NULL}
 };
 
@@ -34,9 +34,9 @@ CAMLprim value ml_python(value unit)
     PyRun_SimpleString("sys.ps2 = '... '");
     PyRun_SimpleString("sys.path.insert(0,'')");
 
-    Py_InitModule("pycaml", PycamlMethods);
-    PyRun_SimpleString("import pycaml");
-    PyRun_SimpleString("from pycaml import ocaml");
+    Py_InitModule("pycamltop", PycamltopMethods);
+    PyRun_SimpleString("import pycamltop");
+    PyRun_SimpleString("from pycamltop import ocaml");
 
     initpycamlmmv();
 

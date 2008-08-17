@@ -346,9 +346,29 @@ pycamlmmv_run_election(PyObject *self, PyObject *args)
   CAMLreturnT(PyObject*,arg);
 }
 
+static PyObject*
+pycamlmmv_send_election(PyObject *self, PyObject *args)
+{
+  static value * closure_f = NULL;
+  PyObject* arg;
+  if(!PyArg_ParseTuple(args, "O", &arg))
+    return NULL;
+  
+  if (closure_f == NULL) {
+    /* First time around, look up by name */
+    closure_f = caml_named_value("send_election");
+  }
+
+  caml_callback(*closure_f, ml_game_of_PyElection(arg));
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
 static PyMethodDef PycamlmmvMethods[] = {
   {"register_class", pycamlmmv_register_class, METH_VARARGS, ""},
   {"run_election", pycamlmmv_run_election, METH_VARARGS, ""},
+  {"send_election", pycamlmmv_send_election, METH_VARARGS, ""},
   {NULL, NULL, 0, NULL}
 };
 

@@ -226,7 +226,7 @@ let eliminate (g:game) (p:project) (f:funding_level) (prior:currency) : unit =
   if f.pamount <= p.minimum then p.fundings <- [] else begin
     let new_amount = f.pamount -. g.round_to_nearest in
     let new_amount = if new_amount < p.minimum then p.minimum else new_amount in
-    if new_amount < prior then p.fundings <- List.filter (fun f' -> f' != f) p.fundings
+    if new_amount <= prior then p.fundings <- List.filter (fun f' -> f' != f) p.fundings
     else f.pamount <- new_amount
   end
 
@@ -324,7 +324,7 @@ let rec many_iterations (g:game) : unit =
 (**********************************************************************
  * Eliminations
  **********************************************************************)
-let eliminate_worst_funding_level (g:game) : bool =
+let eliminate_worst_funding_level ?(even_if_close:bool=false) (g:game) : bool =
   let best = ref None in
   let rec consider_funding_levels p fs prior dist_accum =
     begin match fs with
@@ -334,7 +334,7 @@ let eliminate_worst_funding_level (g:game) : bool =
 	    let dist = dist_accum +. (1. -. f.psupport /. quota_support g) *. (f.pamount -. prior) in
 	    let dist = max 0. dist in
 	    (* don't eliminate something which is only one half-dollar from quota *)
-	    if dist > g.round_to_nearest /. 2. then
+	    if dist > (if even_if_close then 0. else g.round_to_nearest /. 2.) then
 	      begin match !best with
 		| None ->
 		    best := Some (p,f,prior,dist)
@@ -351,21 +351,41 @@ let eliminate_worst_funding_level (g:game) : bool =
   begin match !best with
     | None -> false
     | Some (p,f,prior,dist) ->
-	p.eliminated <- f.pamount;
-	if f.pamount <= p.minimum then p.fundings <- [] else begin
-	  let new_amount = f.pamount -. g.round_to_nearest in
-	  let new_amount = if new_amount < p.minimum then p.minimum else new_amount in
-	  if new_amount < prior then p.fundings <- List.filter (fun f' -> f' != f) p.fundings
-	  else f.pamount <- new_amount
-	end;
+	eliminate g p f prior;
 	true
   end
+
+let total_winners (g:game) : currency =
+  let res = ref 0. in
+  let rec loop_fundings fs best_with_nonzero_support =
+    begin match fs with
+      | [] -> best_with_nonzero_support
+      | f::fs -> 
+	  if f.psupport <= 0. 
+	  then best_with_nonzero_support 
+	  else loop_fundings fs f.pamount
+    end
+  in
+  List.iter (fun p -> res := !res +. loop_fundings p.fundings 0.) g.projects;
+  !res
+
+let eliminate_zero_support_projects (g:game) : unit =
+  List.iter begin fun p ->
+    begin match p.fundings with
+      | [] -> p.eliminated <- 0.
+      | f::_ -> 
+	  if f.psupport <= 0. then begin
+	    p.eliminated <- 0.;
+	    p.fundings <- []
+	  end
+    end
+  end g.projects
 
 let play' (g:game) : unit =
   many_iterations g;
   while eliminate_worst_funding_level g do many_iterations g done
 
-let play (g:game) : unit =
+let rec play (g:game) : unit =
   one_iteration g;
   while
     begin match short_cut_exclusion_search g with
@@ -380,5 +400,12 @@ let play (g:game) : unit =
     end
   do 
     one_iteration g
-  done
+  done;
+  cleanup g
    
+and cleanup (g:game) : unit =
+  if total_winners g > g.total then begin
+    assert (eliminate_worst_funding_level ~even_if_close:true g);
+    play g
+  end else eliminate_zero_support_projects g
+

@@ -18,6 +18,8 @@ class FundingLevel:
     def __str__(self):
         return "%.2f support at $%.2f" % (self.support, self.amount)
 
+import pycamlmmv
+
 class Project:
     """
     Projects to be voted upon.  Variables include:
@@ -284,7 +286,9 @@ class Election:
         f.close()
     
     def run_election(self):
-        import pycamlmmv
+        for p in self.projects.values():
+            p.eliminated = float("inf")
+            p.fundings = []
         pycamlmmv.run_election(self)
         self.store_results()
     
