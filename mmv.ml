@@ -58,7 +58,7 @@ let float_players (g:game) : float =
   float_of_int (players g)
 
 let quota_support (g:game) : support =
-  g.quota *. float_players g
+  min 1.0 (g.quota *. float_players g)
 
 let share (g:game) : currency =
   g.total /. float_players g
