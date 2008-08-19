@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import operator
-#import pycamlmmv
+import pycamlmmv
+import bltp
 
 class FundingLevel:
     """
@@ -17,8 +18,6 @@ class FundingLevel:
     
     def __str__(self):
         return "%.2f support at $%.2f" % (self.support, self.amount)
-
-import pycamlmmv
 
 class Project:
     """
@@ -170,120 +169,10 @@ class Election:
         self.roundToNearest = 0.0
     
     def import_bltp(self, filename):
-        # FIXME: this whole function needs error checking stuff.
-        self.reset()
-        f = open(filename,"r")
-        # deal with first line (resources, quota percentage, rounding, name)
-        line1 = f.readline()
-        line = line1.strip().split(" ", 3)
-        self.totalResources = float(line[0])
-        self.quota = float(line[1])
-        self.roundToNearest = float(line[2])
-        self.name = str(line[3])
-        print "Imported resources, quota, rounding info, and name."
-        
-        print "Importing categories..."
-        # first, create "None" category
-        self.categories[0] = Category(0, "None")
-        # then read in other categories
-        line = f.readline().strip()
-        while line != "--START PROJECTS--":
-            k, v = line.split(" ", 1)
-            c = Category(int(k), str(v))
-            self.categories[int(k)] = c
-            print "Catergory %s imported." % self.categories[int(k)]
-            line = f.readline().strip()
-        
-        # import projects.  loops until it encounters the beginning
-        # of ballots (which is marked in bltp file)
-        print "Importing projects..."
-        projectId = 0
-        line = f.readline().strip()
-        while line != "--START BALLOTS--":
-            list = line.split(" ",3)
-            min, max, cat, name = float(list[0]), float(list[1]), int(list[2]), str(list[3])
-            p = Project(projectId, name, min, max, cat)
-            self.projects[projectId] = p
-            print "Project '%s' imported." % p.name
-            projectId += 1
-            line = f.readline().strip()
-        
-        # import ballots
-        print "Importing ballots..."
-        moreBallots = True
-        ballotId = 0
-        while moreBallots:
-            line = f.readline()[:-1]
-            if line == "EOF":
-                moreBallots = False
-            else:
-                # create ballot instance
-                b = Ballot(ballotId, str(line))
-                # read in all ballot items first, then create final list
-                itemsDict = {}
-                line = f.readline()
-                while line != "0\n":
-                    rank, id, funding = line.strip().split()
-                    rank = int(rank)
-                    id = int(id) - 1
-                    funding = float(funding)
-                    try:
-                        itemsDict[rank]
-                    except KeyError:
-                        itemsDict[rank] = [BallotItem(id, funding)]
-                    else:
-                        itemsDict[rank].append(BallotItem(id, funding))
-                    line = f.readline()
-                """
-                itemsFinal = []
-                for key, val in itemsDict.iteritems():
-                    itemsFinal.append(val)
-                b.ballotItems = itemsFinal
-                """
-                b.ballotItems = itemsDict
-                self.ballots[b.id] = b
-                print "Ballot for %s imported." % b.name
-                ballotId += 1
-        f.close()
-        print "\nImport of file %s successful!" % filename
-        print "%i categories imported" % len(self.categories)
-        print "%i projects imported" % len(self.projects)
-        print "%i ballots imported" % len(self.ballots)
-        print "qouta percentage = %.2f" % self.quota
-        print "resources available = %.2f" % self.totalResources
-        print "rounding_to_nearest = %.2f" % self.roundToNearest
-    
+        bltp.import_bltp(self, filename)
+
     def export_bltp(self, filename):
-        f = open(filename,"w")
-        print "Saving resources, quota, rounding info, and name..."
-        f.write("%.2f %.2f %.2f %s\n"
-                % (self.totalResources, self.quota, self.roundToNearest, self.name))
-        print "Saving Categories..."
-        for k, v in self.categories.iteritems():
-            if k == 0:
-                continue
-            f.write("%i %s\n" % (k, v.name))
-            print "Category %s saved." % v.name
-        print "Saving Projects..."
-        f.write("--START PROJECTS--\n")
-        for p in self.projects.values():
-            f.write("%.2f %.2f %i %s\n" %
-                   (p.minimumBudget, p.maximumBudget, p.category, p.name))
-            print "Project %s saved." % p.name
-        print "Saving Ballots..."
-        f.write("--START BALLOTS--\n")
-        for b in self.ballots.values():
-            f.write("%s\n" % b.name)
-            for rank, items in b.ballotItems.iteritems():
-                for item in items:
-                    f.write("%i %i %.2f\n" %
-                           (rank, item.projectId + 1.0, item.proposedFunding))
-                rank += 1
-            f.write("0\n")
-            print "Ballot %s saved." %  b.name
-        f.write("EOF\n")
-        print "Export complete!"
-        f.close()
+        bltp.export_bltp(self, filename)
     
     def run_election(self):
         for p in self.projects.values():

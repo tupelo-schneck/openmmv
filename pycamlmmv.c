@@ -10,7 +10,7 @@
   return (caml__temp_result); \
 }while(0)
 
-PyObject* class_FundingLevel;
+PyObject* class_FundingLevel = NULL;
 value default_utility;
 
 CAMLprim value ml_register_utility(value u)
@@ -82,9 +82,11 @@ PyList_of_ml_list (value v, PyObject* (*conv)(value))
 PyObject* 
 PyFundingLevel_of_ml_funding_level(value v)
 {
-  //  assert class_FundingLevel <> 0;
   PyObject* tmp;
   PyObject* res;
+  if (class_FundingLevel == NULL) {
+    PyRun_SimpleString("pycamlmmv.register_class(elections.FundingLevel)");
+  }
   tmp = Py_BuildValue("(fff)",
 		      Double_field(v,0),
 		      Double_field(v,1),
@@ -378,6 +380,5 @@ PyMODINIT_FUNC initpycamlmmv(void)
   Py_InitModule("pycamlmmv", PycamlmmvMethods);
   PyRun_SimpleString("import elections");
   PyRun_SimpleString("import pycamlmmv");
-  PyRun_SimpleString("pycamlmmv.register_class(elections.FundingLevel)");
   caml_startup(argv);
 }
