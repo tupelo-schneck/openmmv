@@ -219,18 +219,21 @@ ml_ballot_of_PyBallot(PyObject* p)
   CAMLlocal1(res);
   PyObject* tmp;
   PyObject* keys;
-  res = caml_alloc(6,0);
+  res = caml_alloc(4,0);
   tmp = PyObject_GetAttrString(p,"id");
   Store_field(res,0,Val_int(PyInt_AsLong(tmp)));
   Py_DECREF(tmp);
   tmp = PyObject_GetAttrString(p,"name");
   Store_field(res,1,caml_copy_string(PyString_AsString(tmp)));
   Py_DECREF(tmp);
+  tmp = PyObject_GetAttrString(p,"weight");
+  Store_field(res,2,caml_copy_double(PyFloat_AsDouble(tmp)));
+  Py_DECREF(tmp);
   tmp = PyObject_GetAttrString(p,"ballotItems");
   keys = PyDict_Keys(tmp);
   PyList_Sort(keys);
   gPyBallotItems = tmp;
-  Store_field(res,2,ml_list_of_PyList(keys,
+  Store_field(res,3,ml_list_of_PyList(keys,
 				      ml_ballot_priority_of_key));
   Py_DECREF(keys);
   Py_DECREF(tmp);
@@ -249,7 +252,7 @@ PyBallot_gets_ml_ballot(PyObject* p, value v)
   tmp = PyObject_GetAttrString(p,"ballotItems");
   keys = PyDict_Keys(tmp);
   PyList_Sort(keys);
-  priorities = Field(v,2);
+  priorities = Field(v,3);
   for (i = 0; i < PyList_Size(keys); i++) {
     items = PyDict_GetItem(tmp,PyList_GetItem(keys,i));
     mlitems = Field(priorities,0);

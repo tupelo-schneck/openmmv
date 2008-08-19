@@ -39,6 +39,7 @@ type ballot_priority = ballot_item list
 type ballot = {
   ballotid : int;
   bname : string;
+  weight : float;
   priorities : ballot_priority list;
 }
 
@@ -51,14 +52,13 @@ type game = {
   round_to_nearest : currency; (* used for project funding levels *)
 }
 
-let players (g:game) : int =
-  List.length (g.ballots)
-
 let float_players (g:game) : float = 
-  float_of_int (players g)
+  let res = ref 0. in
+  List.iter (fun b -> res := !res +. b.weight) g.ballots;
+  !res
 
 let quota_support (g:game) : support =
-  min 1.0 (g.quota *. float_players g)
+  max 1.0 (g.quota *. float_players g)
 
 let share (g:game) : currency =
   g.total /. float_players g
@@ -99,7 +99,7 @@ let spent_on_ballot (b:ballot) : currency =
       | b::bs -> aux bs (acc +. spent_on_ballot_priority b)
     end
   in
-  aux b.priorities 0.
+  b.weight *. aux b.priorities 0.
 
 (* Insert a new funding level for project p of the given amount *)
 let add_new_funding_level_if_needed (p:project) (amount:currency) : unit =
@@ -121,7 +121,7 @@ let add_new_funding_level_if_needed (p:project) (amount:currency) : unit =
   in
   loop [] p.fundings
 
-let add_support_for_ballot_item (g:game) (b:ballot_item) : unit =
+let add_support_for_ballot_item (g:game) (b:ballot_item) (weight:float) : unit =
   let p = project_for_ballot_item g b in
   let rec loop fs =
     begin match fs with
@@ -130,7 +130,7 @@ let add_support_for_ballot_item (g:game) (b:ballot_item) : unit =
 	  if f.pamount > p.eliminated || f.pamount > b.actual_amount then ()
 	  else if f.pamount <= b.prior then loop fs
 	  else begin
-	    f.psupport <- f.psupport +. b.bsupport;
+	    f.psupport <- f.psupport +. weight *. b.bsupport;
 	    loop fs
 	  end
     end
@@ -169,24 +169,25 @@ let get_flat_contribution_of_ballot_item (g:game) (b:ballot_item) : unit =
   in
   loop p.fundings b.prior 0.
 
-let adjust_ballot_item (g:game) (b:ballot_item) (flat_sofar:currency) (spent_sofar:currency) : unit =
+let adjust_ballot_item (g:game) (b:ballot_item) (flat_sofar:currency) (spent_sofar:currency) 
+  (weight:float) : unit =
   get_flat_contribution_of_ballot_item g b;
   b.bsupport <- support g flat_sofar spent_sofar b.contribution;
   b.contribution <- b.bsupport *. b.contribution;
-  add_support_for_ballot_item g b 
+  add_support_for_ballot_item g b weight
   
 (**********************************************************************
  * This function is for dealing with tied items on a ballot
  **********************************************************************)
-let adjust_ballot_priority (g:game) (bp:ballot_priority) (flat_sofar:currency) (spent_sofar:currency) 
-  : unit =
+let adjust_ballot_priority (g:game) (bp:ballot_priority) 
+  (flat_sofar:currency) (spent_sofar:currency) (weight:float) : unit =
   List.iter (get_flat_contribution_of_ballot_item g) bp;
   let flat_here = spent_on_ballot_priority bp in
   let support = support g flat_sofar spent_sofar flat_here in
   List.iter begin fun b ->
     b.bsupport <- support;
     b.contribution <- support *. b.contribution;
-    add_support_for_ballot_item g b
+    add_support_for_ballot_item g b weight
   end bp
 
 let adjust_ballot (g:game) (b:ballot) : unit =
@@ -194,7 +195,7 @@ let adjust_ballot (g:game) (b:ballot) : unit =
     begin match priorities with
       | [] -> ()
       | bp::bps ->
-	  adjust_ballot_priority g bp flat_sofar spent_sofar;
+	  adjust_ballot_priority g bp flat_sofar spent_sofar b.weight;
 	  let spent_here = spent_on_ballot_priority bp in
 	  let flat_here = flat_on_ballot_priority bp in
 	  loop_priorities bps (flat_sofar +. flat_here) (spent_sofar +. spent_here)

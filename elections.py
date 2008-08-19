@@ -72,9 +72,10 @@ class Ballot:
     name (str)    - Can be a name, anonymous number, group, whatever
     ballotItems (dict)  - dict of lists of BallotItem instances.  Keyed by rank (int)
     """
-    def __init__(self, id, name=""):
+    def __init__(self, id, name="", weight=1.0):
         self.id = int(id)
         self.name = str(name)
+        self.weight = float(weight)
         self.ballotItems = {}
     
     def __str__(self):

@@ -69,7 +69,7 @@ let ballots =
   let rec aux n bs =
     begin match bs with
       | [] -> []
-      | b::bs -> { ballotid = n; bname = string_of_int n; priorities = list_to_priorities b } :: aux (n+1) bs
+      | b::bs -> { ballotid = n; bname = string_of_int n; weight = 1.0; priorities = list_to_priorities b } :: aux (n+1) bs
     end
   in
   aux 1 ballot_stubs

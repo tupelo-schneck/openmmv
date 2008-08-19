@@ -273,7 +273,7 @@ def import_bltp(e,filename):
             name = unquote_if_needed(strs[0])
             weight = float(strs[1])
             strs = strs[2:-1]
-        b = elections.Ballot(i,name) # TODO: ballot weights
+        b = elections.Ballot(i,name,weight) 
 
         defaultRank = 1
         for bis in strs:
@@ -341,7 +341,7 @@ def export_bltp(e,filename):
 
         for b in e.ballots.values():
             if b.name != '': f.writelines([quote(b.name),' '])
-            f.writelines(['1',' ']) # TODO : weight
+            f.writelines([str_float(b.weight),' '])
             defaultRank = 1
             for (rank, bis) in b.ballotItems.items():
               for bi in bis:
