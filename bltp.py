@@ -343,7 +343,8 @@ def export_bltp(e,filename):
             if b.name != '': f.writelines([quote(b.name),' '])
             f.writelines([str_float(b.weight),' '])
             defaultRank = 1
-            for (rank, bis) in b.ballotItems.items():
+            items = sorted(b.ballotItems.items())
+            for (rank, bis) in items:
               for bi in bis:
                 if rank != defaultRank or len(b.ballotItems[rank]) > 1:
                     f.writelines([str(rank),':'])
@@ -374,7 +375,9 @@ def export_bltp(e,filename):
         for p in e.projects.values():
             if p.category != 0:
                 f.writelines([str(new_id(p.category)),':'])
-            f.writelines([quote(p.name),' ',str_float(p.minimumBudget)])
+            f.write(quote(p.name))
+            if p.minimumBudget != 1.0:
+                f.writelines([' ',str_float(p.minimumBudget)])
             if p.maximumBudget > p.minimumBudget:
                 f.writelines([' ',str_float(p.maximumBudget)])
             f.write('\n')

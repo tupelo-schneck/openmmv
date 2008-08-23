@@ -1,0 +1,11 @@
+# An example with Hagenbach-Bischoff elects too many.
+3 2
+50 A B 0
+150 A C 0
+75 B C 0
+25 C B 0
+0
+A
+B
+C
+"Hagenbach-Bischoff quota - Wikipedia (2)"

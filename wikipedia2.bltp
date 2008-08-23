@@ -1,0 +1,20 @@
+# 53 out of 104 votes want ABCD in some order, yet D is first eliminated
+8 7
+14 A C B D 0
+14 C A B D 0
+14 B A C D 0
+11 D A C B 0
+13 S J M U 0
+13 J S M U 0
+13 M S J U 0
+12 U S J M 0
+0
+A
+B
+C
+D
+S
+J
+M
+U
+"Hagenbach-Bischoff quota - Wikipedia (1)"

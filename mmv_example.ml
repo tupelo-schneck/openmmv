@@ -106,10 +106,15 @@ let print_ballot ?(all=false) b =
 	       bp) b.priorities
 
 let total_contributions_to_project_named g pname =
-  let projectid = (List.find (fun p -> p.pname = pname) g.projects).projectid in
+  let projectid = (List.find (fun p -> p.pname = pname) g.projects).projectid 
+  in
   let res = ref 0. in
-  let do_item bi = if bi.bprojectid = projectid then res := !res +. bi.contribution in
-  List.iter (fun b -> List.iter (fun bp -> List.iter do_item bp) b.priorities) g.ballots;
+  let do_item b bi = 
+    if bi.bprojectid = projectid 
+    then res := !res +. b.weight *. bi.contribution 
+  in
+  List.iter (fun b -> List.iter (fun bp -> List.iter (do_item b) bp) 
+             b.priorities) g.ballots;
   !res
 
 let find_ballot_item which b =
