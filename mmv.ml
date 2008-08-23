@@ -276,7 +276,8 @@ let short_cut_exclusion_search (g:game) (* : currency option *) =
 	    end else begin
 	      let dist = dist_accum +. (1. -. f.psupport /. quota_support) *. (f.pamount -. prior) in
 	      (* don't eliminate something which is only one half-dollar from quota *)
-	      if dist > g.round_to_nearest /. 2. then
+	      (* unless it's a very small level *)
+	      if dist > g.round_to_nearest /. 2. || dist > 0.1 *. f.pamount then
 		consider_funding_levels p fs f.pamount dist (Some (p,f,prior,dist))
 	      else
 		consider_funding_levels p fs f.pamount dist res
@@ -335,7 +336,9 @@ let eliminate_worst_funding_level ?(even_if_close:bool=false) (g:game) : bool =
 	    let dist = dist_accum +. (1. -. f.psupport /. quota_support g) *. (f.pamount -. prior) in
 	    let dist = max 0. dist in
 	    (* don't eliminate something which is only one half-dollar from quota *)
-	    if dist > (if even_if_close then 0. else g.round_to_nearest /. 2.) then
+	    (* unless it's a very small level *)
+	    if dist > (if even_if_close then 0. else g.round_to_nearest /. 2.) 
+	      || dist > 0.1 *. f.pamount then
 	      begin match !best with
 		| None ->
 		    best := Some (p,f,prior,dist)
