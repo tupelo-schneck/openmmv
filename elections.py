@@ -199,11 +199,8 @@ class Election:
             if topLevel.support > (self.quota / 100):
                 funding = (project.id, project.name, topLevel.amount)
                 r.append(funding)
-        print "before: \n%s" % self.results
         self.results = None
-        print "none: \n%s" % self.results
         self.results = Results(r)
-        print "after: \n%s" % self.results
     
     def get_item_by_name(self, name, itemDict):
         """Search given itemDict for named item and return the instance"""
