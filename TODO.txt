@@ -6,4 +6,10 @@ TODO:
 * validate all input
 ** implement ListCtrlValidator and hook into listProjects
 *** make sure proposedFunding is within min/max
-* maybe add optional "comfy" funding level to projects?
+* add optional "comfy" funding level to projects
+* display results for individual ballots
+* import more ballots into election
+* project info display (min, max, desc, etc)
+* delete last loser optimization
+** run election, reset elim, reflag elim last loser, re-run election, repeat...
+** gui checkbox to enable/disable this

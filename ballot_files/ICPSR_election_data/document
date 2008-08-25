@@ -1,0 +1,151 @@
+
+                                 Documentation
+
+     The data in these files were gathered by two different investigators.    
+Elections 1 through 32 and 48 through 99 were gathered in 1987 and 1988       
+respectively, by Nicolaus Tideman, with support from NSF grant SES86-18328.   
+Elections 33 through 35 were gathered by I. D. Hill, Clinical Research Centre,
+Division of Medical Statistics, Watford Road, Harrow, Middlesex HA1 3UJ,      
+England.  Numbers 36 through 47 were not assigned.                            
+     The data are records of ballots from elections of British organizations  
+in which the voters ranked the candidates.  While the data were gathered under
+a stipulation that the organizations involved would remain anonymous, in cases
+were the identity of the organization is known, these organizations have been 
+divided into four categories: non-profit organizations, (NON-PR) professional 
+associations (PR ASN), unions, and corporations (CORP).  There are a number of
+instances of several sub-units of a single organization and of several        
+elections of the same body being represented in the sample.                   
+     The header at the top of each file states the election number, the number
+of voters, the type of organization, the number of candidates to be elected,  
+the number of candidates running, and the election rule used.  STV means the  
+single transferable vote.  AV means the alternative vote (STV used to elect   
+just one candidate).  Repeated alternative vote (RAV) is an election procedure
+in which multiple candidates are elected by electing one by AV, deleting his  
+or her name from all ballots and electing a second by AV, and so on.  MVP is  
+multi-vote plurality.  In these elections voters are asked to rank candidates 
+because several offices are being filled from the same slate, and a vote for a
+candidates who is already elected is transferred to the voter's next choice   
+who is not yet elected.                                                       
+     Information in parentheses on the header line is information that was not
+stated on the ballot.  For some fairly large elections, as indicated in the   
+headers, a sample of ballots was coded.  In all other cases all ballots were  
+coded.  In some elections, as indicated in the headers, each voter voted by   
+listing the names of the candidates in the order of his or her preference on a
+ballot.  In all other cases voters voted by placing numbers beside the names  
+of candidates on a ballot.                                                    
+     For all lines after the header line, the first field is the election     
+number, and the second field is an assigned voter number.  In the cases where 
+voters voted by listing the names of the candidates in order of preference,   
+each subsequent field stands for a rank (first, second, third, etc.), and the 
+contents of the field is a letter that designates the candidate to whom that  
+voter gave that rank.  For the elections in which voters voted by assigning   
+ranks to names listed on the ballot, each field after the first two stands for
+a candidate, and the contents of the field is a number indicating the rank    
+assigned to that candidate by that voter.  A rank of 99 means that that voter 
+did not rank that candidate.  A small number of references to write-in        
+candidates were deleted from the data.  Invalid votes (e.g., votes that ranked
+more than one candidate first) as well as valid votes were coded.             
+     Any questions or comments regarding the data should be addressed to:     
+                                                                              
+     Nicolaus Tideman      
+     Economics Department  
+     Virginia Tech         
+     Blacksburg VA 24061   
+        (703) 231-7592     
+                           
+A record of the header lines of the files follows.                         
+                                                                           
+DISK 1:                                                                    
+A1   380 NON-PR VOTERS ELECT  3  OUT OF 10  BY STV                         
+A2   371 NON-PR VOTERS ELECT  2  OUT OF  9  BY STV                         
+A3   989 UNION  VOTERS ELECT  7  OUT OF 15  BY MVP                         
+A4    43 UNION  VOTERS ELECT  2  OUT OF 14 (BY RAV)                        
+A5   762 PR ASN VOTERS ELECT >7  OUT OF 16  BY STV                         
+A6   280 PR ASN VOTERS ELECT (5) OUT OF  9 (BY STV)                        
+A7    79 UNION  VOTERS ELECT  2  OUT OF 17 (BY RAV)                        
+A8    78 UNION  VOTERS ELECT  2  OUT OF  7 (BY RAV)                        
+A9  3422 PR ASN VOTERS ELECT 11  OUT OF 12  BY STV                         
+
+DISK 2:
+A10   83 UNION  VOTERS ELECT  3  OUT OF 19 (BY RAV)                        
+A11  963 UNION  VOTERS ELECT  6  OUT OF 10  BY STV                         
+A12   76 UNION  VOTERS ELECT  2  OUT OF 20 (BY RAV)                        
+A13  104 UNION  VOTERS ELECT  2  OUT OF 26 (BY RAV)                        
+A14   73 UNION  VOTERS ELECT  2  OUT OF 17 (BY RAV)                        
+A15   77 UNION  VOTERS ELECT  2  OUT OF 21 (BY RAV)                        
+A16  129 UNION  VOTERS ELECT  1  OUT OF  3  BY AV                          
+A17  867 PR ASN VOTERS ELECT  8  OUT OF 13  BY STV   1/6 SAMPLE  LIST NAMES
+A18  976 PR ASN VOTERS ELECT  4  OUT OF  6  BY STV   1/6 SAMPLE  LIST NAMES
+A19  860 PR ASN VOTERS ELECT  3  OUT OF  7  BY STV               LIST NAMES
+A20 2785 PR ASN VOTERS ELECT  4  OUT OF  5  BY STV               LIST NAMES
+A21  760 UNION  VOTERS ELECT  1  OUT OF  8  BY AV   1/10 SAMPLE            
+A22   44 UNION  VOTERS ELECT  2  OUT OF 11 (BY RAV)                        
+A23   91 UNION  VOTERS ELECT  2  OUT OF 29 (BY RAV)                        
+A24   82 UNION  VOTERS ELECT  1  OUT OF  5  BY AV                          
+A25  183 UNION  VOTERS ELECT  1  OUT OF  3  BY AV                          
+A26  100 UNION  VOTERS ELECT  1  OUT OF  5  BY AV                          
+A27   77 UNION  VOTERS ELECT  1  OUT OF  6  BY AV                          
+A28  115 UNION  VOTERS ELECT  1  OUT OF  4  BY AV                          
+A29   68 UNION  VOTERS ELECT  1  OUT OF  3  BY AV                          
+A30   58 UNION  VOTERS ELECT  1  OUT OF  3  BY AV                          
+A31   32 UNION  VOTERS ELECT  1  OUT OF  4  BY AV                          
+A32  148 UNION  VOTERS ELECT  1  OUT OF  5  BY AV                          
+A33    9        VOTERS ELECT  3  OUT OF 18  BY STV                         
+A34   63        VOTERS ELECT 12  OUT OF 14  BY STV                         
+A35  176        VOTERS ELECT  5  OUT OF 17  BY STV                         
+                                                                           
+DISK 3:                                                                    
+A48  923 PR ASN VOTERS ELECT  9  FROM 10  BY STV                           
+A49  575 NON-PR VOTERS ELECT  3  FROM 13  BY STV   1/5  SAMPLE  LIST CODES 
+A50  561 NON-PR VOTERS ELECT  1  FROM  4  BY STV   1/5  SAMPLE  LIST CODES 
+A51   42 NON-PR VOTERS ELECT (3) FROM  6 (BY STV)                          
+A52  667 PR ASN VOTERS ELECT  6  FROM 10  BY STV   1/5  SAMPLE             
+A53  460 NON-PR VOTERS ELECT (4) FROM 10 (BY STV)  1/25 SAMPLE             
+A54  925 NON-PR VOTERS ELECT  9  FROM 11  BY STV                           
+A55  302 PR ASN VOTERS ELECT  5  FROM 10  BY STV                           
+A56  684 CORP   VOTERS ELECT (2) FROM 13 (BY STV)  1/5  SAMPLE             
+A57  310 CORP   VOTERS ELECT  2  FROM  9  BY STV   1/5  SAMPLE             
+A58  216 CORP   VOTERS ELECT  1  FROM  7 (BY STV)                          
+A59  694 CORP   VOTERS ELECT (4) FROM  7 (BY STV)  1/5  SAMPLE             
+A60  197 CORP   VOTERS ELECT  1  FROM  6 (BY STV)                          
+A61  199 CORP   VOTERS ELECT  1  FROM  4 (BY STV)                          
+A62  166 CORP   VOTERS ELECT (1) FROM  4  BY STV                           
+A63  156 CORP   VOTERS ELECT (2) FROM  7 (BY STV)  1/5  SAMPLE             
+A64  196 NON-PR VOTERS ELECT  2  FROM  3 (BY STV)                          
+A65  198 NON-PR VOTERS ELECT  6  FROM 10 (BY STV)                          
+A66  193 NON-PR VOTERS ELECT  4  FROM  6 (BY STV)                          
+A67  183 NON-PR VOTERS ELECT 10  FROM 14 (BY STV)                          
+A68   50 NON-PR VOTERS ELECT  3  FROM  4  BY STV                           
+A69   86 NON-PR VOTERS ELECT  3  FROM  9  BY STV                           
+A70  529 NON-PR VOTERS ELECT  3  FROM  9  BY STV                           
+A71  500 PR ASN VOTERS ELECT  7  FROM  8 (BY STV)  1/5  SAMPLE             
+A72  272 UNION  VOTERS ELECT  2  FROM  3  BY STV   1/10 SAMPLE             
+A73  525 UNION  VOTERS ELECT  2  FROM  5  BY STV   1/5  SAMPLE             
+A74  253 UNION  VOTERS ELECT  2  FROM  3  BY STV   1/10 SAMPLE             
+
+DISK 4:
+A75  311 UNION  VOTERS ELECT  1  FROM  4  BY STV   1/5  SAMPLE             
+A76  403 UNION  VOTERS ELECT  2  FROM  5  BY STV   1/10 SAMPLE             
+A77  213 UNION  VOTERS ELECT  1  FROM  3  BY STV   1/5  SAMPLE             
+A78  486 UNION  VOTERS ELECT  3  FROM  4  BY STV   1/10 SAMPLE             
+A79  362 UNION  VOTERS ELECT  4  FROM  8  BY STV   1/10 SAMPLE             
+A80  269 PR ASN VOTERS ELECT (5) FROM  7  BY STV                           
+A81  902 NON-PR VOTERS ELECT  9  FROM 11  BY STV                           
+A82  373 UNION  VOTERS ELECT  1  FROM  4  BY STV   1/5  SAMPLE             
+A83 1123 PR ASN VOTERS ELECT  3  FROM  4 (BY STV)               LIST CODES 
+A84  277 UNION  VOTERS ELECT 3+3 FROM  7 (BY MVP)                          
+A85  159 UNION  VOTERS ELECT  3  FROM  4 (BY MVP)                          
+A86  157 UNION  VOTERS ELECT 3+1 FROM  5 (BY MVP)                          
+A87  120 UNION  VOTERS ELECT  3  FROM  4 (BY MVP)                          
+A88  135 UNION  VOTERS ELECT 3+3 FROM  9 (BY MVP)                          
+A89  255 UNION  VOTERS ELECT  3  FROM  5 (BY MVP)                          
+A90  366 NON-PR VOTERS ELECT(12) FROM 20 (BY STV)                          
+A91  665 CORP   VOTERS ELECT  1  FROM 14  BY STV   1/5  SAMPLE             
+A92  540 NON-PR VOTERS ELECT  3  FROM 13  BY STV                           
+A93  561 PR ASN VOTERS ELECT  2  FROM  4 (BY STV)  1/5  SAMPLE  LIST CODES 
+A94  580 PR ASN VOTERS ELECT  2  FROM  4 (BY STV)  1/5  SAMPLE  LIST CODES 
+A95  587 PR ASN VOTERS ELECT  2  FROM  7 (BY STV)  1/5  SAMPLE  LIST CODES 
+A96  564 PR ASN VOTERS ELECT  2  FROM  6 (BY STV)  1/5  SAMPLE  LIST CODES 
+A97  284 PR ASN VOTERS ELECT  2  FROM  4 (BY STV)  1/10 SAMPLE  LIST CODES 
+A98  279 PR ASN VOTERS ELECT  2  FROM  4 (BY STV)  1/10 SAMPLE  LIST CODES 
+A99  275 PR ASN VOTERS ELECT  2  FROM  4 (BY STV)  1/10 SAMPLE  LIST CODES 

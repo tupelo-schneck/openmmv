@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import operator
-import pycamlmmv
 import bltp
 
 class FundingLevel:
@@ -18,6 +17,9 @@ class FundingLevel:
     
     def __str__(self):
         return "%.2f support at $%.2f" % (self.support, self.amount)
+
+# needs to be after the FundingLevel declaration for C import
+import pycamlmmv
 
 class Project:
     """
@@ -175,6 +177,10 @@ class Election:
     def export_bltp(self, filename):
         bltp.export_bltp(self, filename)
     
+    def step_election(self):
+        # run one election step
+        pass
+    
     def run_election(self):
         for p in self.projects.values():
             p.eliminated = float("inf")
@@ -217,5 +223,4 @@ class Election:
         else:
             for item in itemDict.values():
                 l.append(item.name)
-        return l
-        
+        return l        

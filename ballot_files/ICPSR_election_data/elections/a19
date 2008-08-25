@@ -1,0 +1,862 @@
+A19  860 PR ASN VOTERS ELECT  3  OUT OF  7  BY STV               LIST NAMES
+ 19   1  B D A
+ 19   2  D F A E
+ 19   3  D A
+ 19   4  D F B A
+ 19   5  D B A
+ 19   6  D A
+ 19   7  D A
+ 19   8  D
+ 19   9  D B
+ 19  10  D B F
+ 19  11  D
+ 19  12  F D
+ 19  13  B D F
+ 19  14  B D
+ 19  15  B D
+ 19  16  B
+ 19  17  B
+ 19  18  B
+ 19  19  B
+ 19  20  B
+ 19  21  B
+ 19  22  F
+ 19  23  F
+ 19  24  F
+ 19  25  F
+ 19  26  F
+ 19  27  F
+ 19  28  F
+ 19  29  F
+ 19  30  G B
+ 19  31  G C D B E A F
+ 19  32  G
+ 19  33  G B E
+ 19  34  G E D C A B F
+ 19  35  G D E B F A C
+ 19  36  G C D
+ 19  37  G E F C D B A
+ 19  38  G D B F A C E
+ 19  39  G E C D
+ 19  40  G B D F E A C
+ 19  41  G E D A
+ 19  42  G E C D A
+ 19  43  G E B C D A F
+ 19  44  G F D B
+ 19  45  G E A D C B
+ 19  46  G F D B
+ 19  47  G
+ 19  48  G C D A
+ 19  49  G D A E C B F
+ 19  50  G E A C F B D
+ 19  51  G D C E A
+ 19  52  G E B F D C A
+ 19  53  G
+ 19  54  G F B D
+ 19  55  G D E
+ 19  56  G E D
+ 19  57  G F E A
+ 19  58  G C D E F A B
+ 19  59  G B D C E A F
+ 19  60  G A D E C F B
+ 19  61  G F E B C D A
+ 19  62  G C D A
+ 19  63  G E D
+ 19  64  G D E A B C F
+ 19  65  G F
+ 19  66  G
+ 19  67  G C A D E F
+ 19  68  G B E F C D A
+ 19  69  G D B
+ 19  70  G C D A
+ 19  71  G A D E F C B
+ 19  72  G D C E A
+ 19  73  G D E C
+ 19  74  G F A B C D E
+ 19  75  G E D A
+ 19  76  G A C E D B F
+ 19  77  G E
+ 19  78  G B E F
+ 19  79  G B C
+ 19  80  G
+ 19  81  G E A C
+ 19  82  G E F
+ 19  83  G D B E C A F
+ 19  84  G D C
+ 19  85  G D A B C E F
+ 19  86  G F B D E
+ 19  87  G A C D
+ 19  88  G D
+ 19  89  G F C
+ 19  90  G A C D E
+ 19  91  G E B F C D A
+ 19  92  G E A C D
+ 19  93  G E A C D
+ 19  94  G E D A
+ 19  95  G F C D
+ 19  96  G F A B E
+ 19  97  G E A C D
+ 19  98  G F D B A
+ 19  99  G D
+ 19 100  G D C A
+ 19 101  G E
+ 19 102  G A C D E B F
+ 19 103  G C D
+ 19 104  G A F E C B D
+ 19 105  G A E C
+ 19 106  G D B A
+ 19 107  G B C
+ 19 108  G
+ 19 109  G D E C A
+ 19 110  G
+ 19 111  G F D A C E B
+ 19 112  G
+ 19 113  G A C D E
+ 19 114  G C A E D F B
+ 19 115  G D A C E B F
+ 19 116  G D E
+ 19 117  G D E B C
+ 19 118  G D B F E A C
+ 19 119  G D C F B
+ 19 120  G F D B A E C
+ 19 121  G E B C
+ 19 122  G E B C F D A
+ 19 123  G B
+ 19 124  G D E A B C F
+ 19 125  G D
+ 19 126  G A E F D B C
+ 19 127  G B A E
+ 19 128  G C D F A B E
+ 19 129  G E A D C F B
+ 19 130  G B A
+ 19 131  G A B E C D F
+ 19 132  G E A D C F B
+ 19 133  G C A
+ 19 134  G E
+ 19 135  G E A C D F B
+ 19 136  G D E F
+ 19 137  G F D
+ 19 138  G D F B C E A
+ 19 139  G E D C
+ 19 140  G F B D E A C
+ 19 141  G D F B
+ 19 142  G D C A
+ 19 143  G E
+ 19 144  G E A D B C F
+ 19 145  G E A C D F B
+ 19 146  G F A E
+ 19 147  G B D F
+ 19 148  G B E F
+ 19 149  G D E A C
+ 19 150  G F A
+ 19 151  G D C
+ 19 152  G E
+ 19 153  G A C
+ 19 154  G D A E B C F
+ 19 155  G B D E C A F
+ 19 156  G A C D E B F
+ 19 157  G A D C
+ 19 158  G A B C D E F
+ 19 159  G E F B C D A
+ 19 160  F C A
+ 19 161  G D B A E
+ 19 162  G A C D
+ 19 163  G B D C
+ 19 164  G F A
+ 19 165  G C D A E
+ 19 166  G C E D A B F
+ 19 167  G A D E
+ 19 168  G D A E C
+ 19 169  G E B C D A F
+ 19 170  G F A E
+ 19 171  G
+ 19 172  G E D A C B F
+ 19 173  G F
+ 19 174  F G B
+ 19 175  F G E A B D C
+ 19 176  F G C A D E B
+ 19 177  F G D B
+ 19 178  F G D A
+ 19 179  F G D C A E
+ 19 180  F G A C B E D
+ 19 181  F G A
+ 19 182  F G C
+ 19 183  B G E A
+ 19 184  B G A D
+ 19 185  B G D C
+ 19 186  B F G
+ 19 187  B G C D
+ 19 188  B G D E
+ 19 189  B F G D E A C
+ 19 190  B F G D C E A
+ 19 191  B G
+ 19 192  F B G
+ 19 193  B G F D
+ 19 194  B G D E A
+ 19 195  B D G E A C F
+ 19 196  B D G F C A E
+ 19 197  B D G
+ 19 198  B D G E F A
+ 19 199  B D G E C F A
+ 19 200  B D F G E A C
+ 19 201  F D G E
+ 19 202  F D G B C E A
+ 19 203  F D G
+ 19 204  D B G E
+ 19 205  D F G C E
+ 19 206  D G E A C B F
+ 19 207  D G A B
+ 19 208  D G A C B F E
+ 19 209  D G
+ 19 210  D G E A C B F
+ 19 211  D G E C A F B
+ 19 212  D B F G C A E
+ 19 213  D F G B
+ 19 214  D B G E
+ 19 215  D G A C E
+ 19 216  D B G F A C E
+ 19 217  D G E A C
+ 19 218  D G B E
+ 19 219  D G
+ 19 220  D G B A C F E
+ 19 221  D G B A
+ 19 222  D F G B
+ 19 223  D G C B E A
+ 19 224  D G B F E A C
+ 19 225  D G F A B C E
+ 19 226  D G E C A F B
+ 19 227  D F G B C A E
+ 19 228  D G C E A
+ 19 229  D F G B E A C
+ 19 230  D F A E G
+ 19 231  D A E G C B F
+ 19 232  D A E G C B F
+ 19 233  D A G E C
+ 19 234  D F B A E G C
+ 19 235  D A G E C F B
+ 19 236  D A E G C F B
+ 19 237  D A E G B C F
+ 19 238  D A G C B E F
+ 19 239  D A E G C B F
+ 19 240  D A G E C
+ 19 241  D A G
+ 19 242  D A G F E B C
+ 19 243  D A G E
+ 19 244  D A G E C B F
+ 19 245  D A G C E
+ 19 246  B D A E G C F
+ 19 247  E D G F
+ 19 248  E C B A D G F
+ 19 249  E
+ 19 250  E D C A
+ 19 251  E G
+ 19 252  E C D A
+ 19 253  E C D G
+ 19 254  E G F A
+ 19 255  E G
+ 19 256  E B G F C
+ 19 257  E C A
+ 19 258  E F
+ 19 259  E C B
+ 19 260  E D A B C G F
+ 19 261  E G D C
+ 19 262  E C B
+ 19 263  E D G B C A F
+ 19 264  E D
+ 19 265  E C D B A
+ 19 266  E G B D A
+ 19 267  E G
+ 19 268  E F C D A
+ 19 269  E D C A G
+ 19 270  E B C F A
+ 19 271  E G C
+ 19 272  E
+ 19 273  E A G B D
+ 19 274  E C D G A B F
+ 19 275  E B A
+ 19 276  E D C A G F B
+ 19 277  E B A G C D F
+ 19 278  E F A G B D C
+ 19 279  E B D
+ 19 280  E B
+ 19 281  E C D A B F G
+ 19 282  E C G D
+ 19 283  E C A G D B F
+ 19 284  E D C G A B F
+ 19 285  E F G C B A D
+ 19 286  E G D F B C A
+ 19 287  E G C D
+ 19 288  E G D
+ 19 289  E A C
+ 19 290  E
+ 19 291  E G F D
+ 19 292  E D C A B G F
+ 19 293  E G C D
+ 19 294  E A G C D F B
+ 19 295  E G F
+ 19 296  E A G D C F B
+ 19 297  E B C
+ 19 298  E C A B D G
+ 19 299  E D G A C F B
+ 19 300  E G C D
+ 19 301  E F G D A B C
+ 19 302  E D
+ 19 303  E A C G D F B
+ 19 304  E G C F D B A
+ 19 305  E C B
+ 19 306  E G D
+ 19 307  E C G D A
+ 19 308  E D G B
+ 19 309  E C A D
+ 19 310  E C A D F G B
+ 19 311  E C D G
+ 19 312  E G
+ 19 313  E B F
+ 19 314  E A C D G B F
+ 19 315  E G F C
+ 19 316  E C D A
+ 19 317  E A C G D B F
+ 19 318  E G D C
+ 19 319  E C A G B D F
+ 19 320  E G
+ 19 321  E G A C
+ 19 322  E B G D A
+ 19 323  E F G B C
+ 19 324  E A C
+ 19 325  E G D A C
+ 19 326  E G A D C B F
+ 19 327  E D G C F
+ 19 328  E D C A B G F
+ 19 329  E A D G B C F
+ 19 330  E G C B D A G
+ 19 331  E
+ 19 332  E G
+ 19 333  E A D
+ 19 334  E G A C D
+ 19 335  E G A B C D F
+ 19 336  E D C G A B F
+ 19 337  E D A G C
+ 19 338  E A C B G D F
+ 19 339  E G
+ 19 340  E B A D G C F
+ 19 341  E C A D B G F
+ 19 342  E A C G
+ 19 343  E D C B G A F
+ 19 344  E A D C G F B
+ 19 345  E C D B A
+ 19 346  E F A B C D G
+ 19 347  E C A
+ 19 348  E D G F C A B
+ 19 349  E G B C A D F
+ 19 350  E C D G A B F
+ 19 351  E C D
+ 19 352  E C A
+ 19 353  E G A C D B F
+ 19 354  E D
+ 19 355  E A C B D G F
+ 19 356  E C A
+ 19 357  E C A F
+ 19 358  E B
+ 19 359  E A D
+ 19 360  E G A C D
+ 19 361  E A B D F G C
+ 19 362  E G A D B F C
+ 19 363  E C G A D B F
+ 19 364  E A C D G B F
+ 19 365  E C A D B G F
+ 19 366  E A C G D F B
+ 19 367  E G B A C D F
+ 19 368  E A
+ 19 369  E G A D C B F
+ 19 370  E G A D C
+ 19 371  E A C D F B G
+ 19 372  E G D B C A F
+ 19 373  E A G D C
+ 19 374  E A G D C
+ 19 375  E C A F G D B
+ 19 376  E G A D B
+ 19 377  E D F C
+ 19 378  E G C A D B
+ 19 379  E G D C
+ 19 380  E G D A B F C
+ 19 381  E D G A C
+ 19 382  E A G D C B F
+ 19 383  E G D
+ 19 384  E A D
+ 19 385  E G F
+ 19 386  E D A
+ 19 387  E B A C
+ 19 388  E D G
+ 19 389  E G A D
+ 19 390  E A G C B D F
+ 19 391  E C F D
+ 19 392  E G F A B C D
+ 19 393  E C
+ 19 394  E D C A B
+ 19 395  E G A D
+ 19 396  E G D C A B F
+ 19 397  E G A B F C D
+ 19 398  E D A C
+ 19 399  E D B G
+ 19 400  E F B
+ 19 401  E G D C
+ 19 402  E B C
+ 19 403  E G
+ 19 404  E D B A
+ 19 405  E A C D G B F
+ 19 406  E F G D B
+ 19 407  E
+ 19 408  E B F A
+ 19 409  E D A G
+ 19 410  E A C D B F G
+ 19 411  E G A C D B F
+ 19 412  E A B
+ 19 413  E A C
+ 19 414  E A C D B F G
+ 19 415  E G B
+ 19 416  E C D G A
+ 19 417  E C A D G
+ 19 418  E A D G F C B
+ 19 419  E A D
+ 19 420  E F G D B C A
+ 19 421  E G C D A B F
+ 19 422  F E
+ 19 423  F E B G A D C
+ 19 424  F E A G C D B
+ 19 425  F E G
+ 19 426  F E C A
+ 19 427  F E
+ 19 428  F E B A C D G
+ 19 429  F E C B D G A
+ 19 430  F E C A
+ 19 431  F E G B
+ 19 432  F E
+ 19 433  F E B C D G A
+ 19 434  F E G C
+ 19 435  F E D
+ 19 436  B E
+ 19 437  B E F A D C G
+ 19 438  B E G F
+ 19 439  B F E A G D C
+ 19 440  B E F
+ 19 441  B E
+ 19 442  B E A C
+ 19 443  B F E A C G D
+ 19 444  B E C
+ 19 445  B E F G C
+ 19 446  B E F C D G A
+ 19 447  B E D
+ 19 448  B E F D
+ 19 449  B E A D C F G
+ 19 450  B E D
+ 19 451  B E F
+ 19 452  B E G C A D F
+ 19 453  B E G F
+ 19 454  B E F C A D G
+ 19 455  B E G
+ 19 456  B D E A
+ 19 457  B D E G
+ 19 458  D E A C
+ 19 459  D E
+ 19 460  D E A G B F C
+ 19 461  D E B G C A F
+ 19 462  D B E G C A F
+ 19 463  D E A G
+ 19 464  D E C B A G F
+ 19 465  D E B A C G F
+ 19 466  D E F C
+ 19 467  D E A
+ 19 468  D E C G
+ 19 469  D E F B
+ 19 470  D E C A
+ 19 471  D E A G C B F
+ 19 472  D E C A G B F
+ 19 473  D E G
+ 19 474  D E A
+ 19 475  D E G A
+ 19 476  D E G A C
+ 19 477  C B G F A
+ 19 478  C A E
+ 19 479  C E D G
+ 19 480  C G D E A B F
+ 19 481  C E B D G A F
+ 19 482  C G D B A F E
+ 19 483  C A G D E B F
+ 19 484  C G
+ 19 485  C E B G F A D
+ 19 486  C D G
+ 19 487  C G A D E B F
+ 19 488  C E A D B F G
+ 19 489  C D A E G F B
+ 19 490  C D G
+ 19 491  C G F
+ 19 492  C D E A G F B
+ 19 493  C E D A G B F
+ 19 494  C F B
+ 19 495  C D G A
+ 19 496  C F A D G E B
+ 19 497  C G D E A
+ 19 498  C A
+ 19 499  C A
+ 19 500  C
+ 19 501  C D A E G
+ 19 502  C E A D
+ 19 503  C D B A G E F
+ 19 504  C A B
+ 19 505  C A E
+ 19 506  C D E A G B F
+ 19 507  C D E
+ 19 508  C A D E G
+ 19 509  C E D G A
+ 19 510  C B A E D G F
+ 19 511  C G A D E B F
+ 19 512  C E A D
+ 19 513  C A B
+ 19 514  C E A D B G F
+ 19 515  C A
+ 19 516  C D A B E G F
+ 19 517  C E A
+ 19 518  C A B D
+ 19 519  C A D E
+ 19 520  C E G
+ 19 521  C D A B E G F
+ 19 522  C G A E
+ 19 523  C E B A F D G
+ 19 524  C
+ 19 525  C E G A D F B
+ 19 526  C A G
+ 19 527  C G E D A F B
+ 19 528  C E A D B G F
+ 19 529  C A D G E
+ 19 530  C E D A G
+ 19 531  C D E
+ 19 532  C E D B A G F
+ 19 533  C A E G D B F
+ 19 534  C A E D F G B
+ 19 535  C D G A B
+ 19 536  C A D E
+ 19 537  C A D E
+ 19 538  C D
+ 19 539  C D A G B F E
+ 19 540  C E A D G F B
+ 19 541  C
+ 19 542  C B E D A G
+ 19 543  C E D
+ 19 544  C D G E A B F
+ 19 545  C E F
+ 19 546  C G E D A
+ 19 547  C E A D B G F
+ 19 548  C D E
+ 19 549  C A D E G
+ 19 550  C D G B F E A
+ 19 551  C A B
+ 19 552  C A E F G D
+ 19 553  C E D A
+ 19 554  C A D
+ 19 555  C F G A B D E
+ 19 556  C A B G E D F
+ 19 557  C A D E G F B
+ 19 558  C G B D
+ 19 559  C E A B D G F
+ 19 560  C G D A E
+ 19 561  C G B
+ 19 562  C E D A
+ 19 563  C G A E D F B
+ 19 564  C A E D
+ 19 565  C A E G
+ 19 566  C E G D A B
+ 19 567  C A E D G
+ 19 568  C A
+ 19 569  C E D
+ 19 570  C A E
+ 19 571  C B E
+ 19 572  C E G A B F D
+ 19 573  C D A E G B F
+ 19 574  C B D F G
+ 19 575  C E D A G
+ 19 576  C E B
+ 19 577  C F G B D
+ 19 578  C D A G B E F
+ 19 579  C A E G D B F
+ 19 580  C E B D A
+ 19 581  C E D B G A F
+ 19 582  C A E D
+ 19 583  C A D E G B F
+ 19 584  C
+ 19 585  C A D B
+ 19 586  C E A B D F G
+ 19 587  C A E G D
+ 19 588  C E D G A F B
+ 19 589  C A E D G
+ 19 590  C A B G D E F
+ 19 591  C D B A E G F
+ 19 592  C A E
+ 19 593  C A D E G B F
+ 19 594  C A
+ 19 595  C B E G
+ 19 596  C E G A
+ 19 597  C
+ 19 598  C A G
+ 19 599  C E D A G B F
+ 19 600  C D A E B
+ 19 601  C G E A D
+ 19 602  C A D G E B F
+ 19 603  C D E
+ 19 604  C A B D
+ 19 605  C D E A G
+ 19 606  C A D E G B F
+ 19 607  C B E D A F G
+ 19 608  C A F B G E D
+ 19 609  C D A G E
+ 19 610  C E A
+ 19 611  C B E D G A
+ 19 612  C E G A D
+ 19 613  C E A
+ 19 614  C E D B A G F
+ 19 615  C E D
+ 19 616  C D E B A G F
+ 19 617  C A
+ 19 618  C D G E F A B
+ 19 619  F C D G A E B
+ 19 620  F C G A D
+ 19 621  F C
+ 19 622  F C G
+ 19 623  F C A D
+ 19 624  F C G
+ 19 625  B C A G
+ 19 626  B C A
+ 19 627  B C A
+ 19 628  B C A D
+ 19 629  B C F
+ 19 630  B C
+ 19 631  B C A G F E D
+ 19 632  B C D A E G F
+ 19 633  B C D E
+ 19 634  B C D E A G
+ 19 635  B C A D E F G
+ 19 636  B F D C E A G
+ 19 637  F D C
+ 19 638  F D C G A
+ 19 639  F D C G E A B
+ 19 640  D C E A B
+ 19 641  D C
+ 19 642  D B C E
+ 19 643  D C A B E G F
+ 19 644  D C E G A
+ 19 645  D C G B
+ 19 646  D C G E A B F
+ 19 647  D C A E B G F
+ 19 648  D C A G B E F
+ 19 649  D C E G
+ 19 650  D C G
+ 19 651  D C A E B F G
+ 19 652  D C G
+ 19 653  D B C A E F G
+ 19 654  D C A E G F
+ 19 655  D A E C G F B
+ 19 656  D A C E
+ 19 657  D A C E
+ 19 658  D A B C E F G
+ 19 659  D A B C
+ 19 660  D A B C
+ 19 661  D A C E B G F
+ 19 662  D B A C
+ 19 663  F D A C B E G
+ 19 664  B D A C G E
+ 19 665  A E C G D
+ 19 666  A D E C G B F
+ 19 667  A E C D
+ 19 668  A E C
+ 19 669  A E C B
+ 19 670  A
+ 19 671  A D G
+ 19 672  A E G F
+ 19 673  A G E
+ 19 674  A E G D F B C
+ 19 675  A E D C G
+ 19 676  A D F
+ 19 677  A E C
+ 19 678  A E B C F G D
+ 19 679  A E F
+ 19 680  A D C B E F G
+ 19 681  A G B E D F
+ 19 682  A D B C G
+ 19 683  A B G D C E F
+ 19 684  A G E D C B F
+ 19 685  A E
+ 19 686  A D C E
+ 19 687  A C D E G F B
+ 19 688  A D G C
+ 19 689  A E C
+ 19 690  A C G E D B F
+ 19 691  A C D E G B F
+ 19 692  A E D
+ 19 693  A D
+ 19 694  A E C B G
+ 19 695  A D E G
+ 19 696  A D C G E
+ 19 697  A C E D G
+ 19 698  A E C G D B F
+ 19 699  A C E B G D F
+ 19 700  A G
+ 19 701  A F C D
+ 19 702  A E C B D G F
+ 19 703  A C D E
+ 19 704  A B D F C E G
+ 19 705  A E C D G B F
+ 19 706  A C D E G F B
+ 19 707  A D E B C G F
+ 19 708  A D B C E F G
+ 19 709  A B E C D G F
+ 19 710  A G D E C
+ 19 711  A D G C
+ 19 712  A E F
+ 19 713  A
+ 19 714  A B G C E
+ 19 715  A D E F G B C
+ 19 716  A B C E D G F
+ 19 717  A C E
+ 19 718  A D G E B
+ 19 719  A G D B C F E
+ 19 720  A C E
+ 19 721  A G C E D
+ 19 722  A B C
+ 19 723  A C D G E
+ 19 724  A C E B D F G
+ 19 725  A C D
+ 19 726  A E C G D B F
+ 19 727  A D C E G B F
+ 19 728  A C D G
+ 19 729  A E C B
+ 19 730  A C E D G B F
+ 19 731  A E D B C F G
+ 19 732  A D G E C
+ 19 733  A C D F B G E
+ 19 734  A E G
+ 19 735  A B C D E F G
+ 19 736  A D E
+ 19 737  A G E C D F B
+ 19 738  A D E
+ 19 739  A E C D G B F
+ 19 740  A D E G
+ 19 741  A E C
+ 19 742  A G F
+ 19 743  A E D C B F G
+ 19 744  A D G E C
+ 19 745  A E C D
+ 19 746  A C D E B G F
+ 19 747  A C E
+ 19 748  A D E C F G B
+ 19 749  A
+ 19 750  A E D C
+ 19 751  A E G B D C F
+ 19 752  A C D E G B F
+ 19 753  A C E G D
+ 19 754  A C G E D
+ 19 755  A G D E C
+ 19 756  A C
+ 19 757  A C D E G B F
+ 19 758  A E
+ 19 759  A E G D C
+ 19 760  A D E G
+ 19 761  A D F E G B C
+ 19 762  A C E
+ 19 763  A C E
+ 19 764  A D E C G
+ 19 765  A B D E
+ 19 766  A D B C G E F
+ 19 767  A B F E G C D
+ 19 768  A E G D
+ 19 769  A E D C B G F
+ 19 770  A E C D G B F
+ 19 771  A D C E
+ 19 772  A E B F C G D
+ 19 773  A E D C G F B
+ 19 774  A D E G
+ 19 775  A C E G D
+ 19 776  A C E G B F D
+ 19 777  A C D
+ 19 778  A E G D
+ 19 779  A B E F D
+ 19 780  A D E
+ 19 781  A E C G D
+ 19 782  A C G E
+ 19 783  A C D E G B F
+ 19 784  A C D E G
+ 19 785  A C D
+ 19 786  A E C G B D F
+ 19 787  A C E G D B F
+ 19 788  A B D C E G F
+ 19 789  A C E D B G F
+ 19 790  A D E
+ 19 791  A D E G
+ 19 792  A F B C G D E
+ 19 793  A G D
+ 19 794  A D C B F G E
+ 19 795  A E C D G B F
+ 19 796  A C E D G B F
+ 19 797  A E F
+ 19 798  A D E G C B F
+ 19 799  A G E C D F B
+ 19 800  A D C E G B F
+ 19 801  A E G D C
+ 19 802  A D G E C
+ 19 803  A C E
+ 19 804  A E D
+ 19 805  A G C E B D F
+ 19 806  A C D
+ 19 807  A F C B
+ 19 808  A G C E D B F
+ 19 809  A C B D E G F
+ 19 810  A E
+ 19 811  A D C B E G F
+ 19 812  A E D B
+ 19 813  A E F B C G D
+ 19 814  A C D
+ 19 815  A E D
+ 19 816  A E C G D F C
+ 19 817  A C E G F D B
+ 19 818  A C D E G
+ 19 819  A C E D G B F
+ 19 820  A E
+ 19 821  A
+ 19 822  A C G B
+ 19 823  A B E C D F
+ 19 824  A D E G C B F
+ 19 825  A D E G C
+ 19 826  A G E D C
+ 19 827  A C D E G F B
+ 19 828  A E G D C
+ 19 829  A D C G E F B
+ 19 830  A E C D G B F
+ 19 831  A G D F
+ 19 832  A F E
+ 19 833  A D E G C B F
+ 19 834  A C D G E F B
+ 19 835  A E C B G D F
+ 19 836  A C D
+ 19 837  A C B E D
+ 19 838  A G E B C D F
+ 19 839  A C D E B F G
+ 19 840  A D C
+ 19 841  A C D E B F G
+ 19 842  F A C G D B E
+ 19 843  F A B C D E G
+ 19 844  F A G
+ 19 845  F A G
+ 19 846  F A C
+ 19 847  B A F E G D C
+ 19 848  B A D C
+ 19 849  B A C G E
+ 19 850  B A E F G
+ 19 851  B A D G E
+ 19 852  B A D G C E F
+ 19 853  B A E
+ 19 854  B A C D E G F
+ 19 855  B F A C D E G
+ 19 856  B F A
+ 19 857  B A C D E F G
+ 19 858  B A
+ 19 859  B A C
+ 19 860  B F A D G E C
+

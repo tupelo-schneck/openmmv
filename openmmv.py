@@ -96,6 +96,8 @@ class BallotListCtrl(wx.ListCtrl,
     def SetStringItem(self, index, col, data):
         litem = self.GetItem(index)
         dataId = litem.GetData()
+        Debug("%s" % dataId)
+        Debug("%s" % MainFrame.listDataDict)
         item = MainFrame.listDataDict[dataId]
         Debug("SetStringItem: item => %s" % item)
         oldRank = self.getColumnText(index, 0)
@@ -825,6 +827,7 @@ class MainFrame(wx.Frame):
     def PopulateBallotSimple(self, ballot):
         self.listProjects.DeleteAllItems()
         self.treeProjects.DeleteAllItems()
+        self.listDataDict = {}
         # Fill in availble projects tree
         catIdDict = {}
         root = self.treeProjects.AddRoot("Root")

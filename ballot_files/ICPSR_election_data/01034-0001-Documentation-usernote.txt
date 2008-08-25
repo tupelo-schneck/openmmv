@@ -1,0 +1,7 @@
+pkg01034-0001.zip is a zipped archive of one or more files and/or directories. 
+
+These data are part of ICPSR's Publication-Related Archive and are
+distributed exactly as they arrived from the data depositor.  The files
+have been zipped by ICPSR for release, but ICPSR has not checked or
+processed this material.  Users should consult the investigators if
+further information is needed.

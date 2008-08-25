@@ -1,0 +1,16 @@
+Bibliography
+Rank-Order Voting Data, 1986-1988
+
+This bibliography includes published and unpublished works that are related 
+to ICPSR study 1034. It includes works that are based on primary
+or secondary analysis of the data, or which describe or critique those
+data or the collection methodology. This list represents all items known
+to ICPSR as of 2008-08-19.
+
+If you publish a work or know of other works that are based on these data,
+please send the complete citation and name of the ICPSR study used to:
+bibliography@icpsr.umich.edu.
+
+
+1. Feld, Scott; Grofman, Bernard, "Collectivities as actors: Consistency of
+collective choice." Rationality and Society. Oct 1990, 2, (4), 429 - 448.
