@@ -166,7 +166,7 @@ ml_ballot_item_of_PyBallotItem(PyObject* p)
   CAMLparam0();
   CAMLlocal1(res);
   PyObject* tmp;
-  res = caml_alloc(6,0);
+  res = caml_alloc(7,0);
   tmp = PyObject_GetAttrString(p,"projectId");
   Store_field(res,0,Val_int(PyInt_AsLong(tmp)));
   Py_DECREF(tmp);
@@ -185,6 +185,7 @@ ml_ballot_item_of_PyBallotItem(PyObject* p)
   tmp = PyObject_GetAttrString(p,"voterFunding");
   Store_field(res,5,caml_copy_double(PyFloat_AsDouble_NoneZero(tmp)));
   Py_DECREF(tmp);
+  Store_field(res,6,Val_unit); /* None */
   CAMLreturn(res);
 }
 

@@ -67,7 +67,7 @@ camlcode.o: $(MLMODULES:=.cmx)
 
 pycamlmmv_module: pycamlmmv.$(SOEXT)
 
-pycamlmmv.$(SOEXT): camlcode.o pycamlmmv_c.o
+pycamlmmv.$(SOEXT): pycamlmmv_c.o camlcode.o
 	$(SOLINK) -o $@ $(^F:%.o=obj/%.o) $(SOLINKLIBS)
 
 mmv: $(CMODULES:=_c.o) pycamltop_c.o $(MLMODULES:=.cmo) pycamltop.cmo 

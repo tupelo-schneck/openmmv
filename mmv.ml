@@ -32,6 +32,7 @@ type ballot_item = {
   mutable actual_amount : currency; 
   mutable bsupport : support;
   mutable contribution : currency;
+  mutable project : project option;
 }
 
 type ballot_priority = ballot_item list
@@ -72,7 +73,15 @@ let support (g:game) (flat_before:currency) (spent_before:currency) (flat_here:c
   if support *. flat_here > spend_limit then spend_limit /. flat_here else support
 
 let project_for_ballot_item (g:game) (b:ballot_item) : project =
-  List.find (fun p -> p.projectid = b.bprojectid) g.projects
+  begin match b.project with
+    | None ->
+	let p =
+	  List.find (fun p -> p.projectid = b.bprojectid) g.projects
+	in
+	b.project <- Some p;
+	p
+    | Some p -> p
+  end
 
 let spent_on_ballot_priority (bp:ballot_priority) : currency =
   let rec aux bs acc =
@@ -395,7 +404,7 @@ let rec play (g:game) : unit =
     begin match short_cut_exclusion_search g with
       | None -> true
       | Some (surplus,lowest) -> 
-	  if surplus < g.round_to_nearest /. 2. then
+	  if surplus < g.round_to_nearest /. 10. then
 	    begin match lowest with
 	      | (p,f,prior,_)::_ -> eliminate g p f prior; true
 	      | [] -> false

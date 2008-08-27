@@ -7,9 +7,9 @@ import elections
 
 def print_timing(func):
     def wrapper(*arg):
-        t1 = time.time()
+        t1 = time.clock()
         res = func(*arg)
-        t2 = time.time()
+        t2 = time.clock()
         delta = (t2-t1)*1000.0
         #print '%s took %0.3f ms' % (func.func_name, delta)
         return res, delta
@@ -26,7 +26,7 @@ class Test:
     
     @print_timing
     def runSTV(self, file):
-        b = ballots.BltBallots()
+        b = ballots.Ballots()
         b.load(file)
         e = stv.MeekSTV(b, threshName=("Hare", "Dynamic", "Fractional"))
         e.runElection()

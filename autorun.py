@@ -1,6 +1,6 @@
 import elections
 g = elections.Election()
-g.import_bltp("wikipedia3.bltp")
+g.import_bltp("ICPSR_election_data/blt/a12.blt")
 #g.run_election()
 import pycamlmmv
 pycamlmmv.send_election(g)
