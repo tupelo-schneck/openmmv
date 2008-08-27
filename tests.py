@@ -28,7 +28,7 @@ class Test:
     def runSTV(self, file):
         b = ballots.Ballots()
         b.load(file)
-        e = stv.MeekSTV(b, threshName=("Hare", "Dynamic", "Fractional"))
+        e = stv.MeekSTV(b, threshName=("Hare", "Static", "Fractional"))
         e.runElection()
         winS = "STV election winners: "
         for w in e.winners:

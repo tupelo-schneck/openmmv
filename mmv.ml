@@ -232,6 +232,12 @@ let one_iteration (g:game) : unit =
  * TODO: consider a faster search for elimination level...
  **********************************************************************)
 let eliminate (g:game) (p:project) (f:funding_level) (prior:currency) : unit =
+(*  let t = Util.process_time () in
+  print_string "Elimination at ";
+  print_float t;
+  print_endline " seconds";
+  flush stdout;
+*)  
   p.eliminated <- f.pamount;
   if f.pamount <= p.minimum then p.fundings <- [] else begin
     let new_amount = f.pamount -. g.round_to_nearest in
@@ -399,26 +405,35 @@ let play' (g:game) : unit =
   while eliminate_worst_funding_level g do many_iterations g done
 
 let rec play (g:game) : unit =
+(*  let t = Util.process_time () in
+  print_string "Start at ";
+  print_float t;
+  print_endline " seconds";
+  flush stdout;
+*)
   one_iteration g;
   while
     begin match short_cut_exclusion_search g with
       | None -> true
-      | Some (surplus,lowest) -> 
-	  if surplus < g.round_to_nearest /. 10. then
-	    begin match lowest with
-	      | (p,f,prior,_)::_ -> eliminate g p f prior; true
-	      | [] -> false
-	    end
-	  else true
+      | Some (_,[]) -> false
+      | Some (surplus,_) when surplus >= g.round_to_nearest /. 10. -> true
+      | Some (_, (p,f,prior,_)::_) ->
+	  eliminate g p f prior; true
     end
   do 
     one_iteration g
   done;
   cleanup g
-   
+(*  ;
+  let t = Util.process_time () in
+  print_string "Finished game at "; 
+  print_float t;
+  print_endline " seconds";
+  flush stdout
+*)
+ 
 and cleanup (g:game) : unit =
   if total_winners g > g.total then begin
     assert (eliminate_worst_funding_level ~even_if_close:true g);
     play g
   end else eliminate_zero_support_projects g
-

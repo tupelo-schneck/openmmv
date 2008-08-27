@@ -1,6 +1,6 @@
 # pycamltop not included here
-MLMODULES = mmv pycamlmmv
-CMODULES = pycamlmmv
+MLMODULES = util mmv pycamlmmv
+CMODULES = util pycamlmmv
 
 all: mmv pycamlmmv_module
 clean:
@@ -67,7 +67,7 @@ camlcode.o: $(MLMODULES:=.cmx)
 
 pycamlmmv_module: pycamlmmv.$(SOEXT)
 
-pycamlmmv.$(SOEXT): pycamlmmv_c.o camlcode.o
+pycamlmmv.$(SOEXT): $(CMODULES:=_c.o) camlcode.o
 	$(SOLINK) -o $@ $(^F:%.o=obj/%.o) $(SOLINKLIBS)
 
 mmv: $(CMODULES:=_c.o) pycamltop_c.o $(MLMODULES:=.cmo) pycamltop.cmo 
