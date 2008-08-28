@@ -5,6 +5,27 @@ import openstv.ballots as ballots
 import openstv.STV as stv
 import elections
 
+class MeekSTVNoDefaultWinners(stv.MeekSTV):
+    """
+    """
+    def electionOver(self):
+        "Election is over when we know all the winners."
+        
+        # Already recognized enough winners
+        if len(self.winners) == self.b.nSeats:
+            desc = "The election is over since all seats are filled. "
+            return (True, desc)
+        
+        # Every candidate has either won or been eliminated
+        if self.purgatory == []:
+            desc = "The election is over since all candidates have won or been eliminated"
+            return (True, desc)
+                
+        # Not done yet.
+        return (False, "")
+
+
+
 def print_timing(func):
     def wrapper(*arg):
         t1 = time.clock()
@@ -28,10 +49,10 @@ class Test:
     def runSTV(self, file):
         b = ballots.Ballots()
         b.load(file)
-        e = stv.MeekSTV(b, threshName=("Hare", "Static", "Fractional"))
+        e = MeekSTVNoDefaultWinners(b, threshName=("Hare", "Static", "Fractional"))
         e.runElection()
         winS = "STV election winners: "
-        for w in e.winners:
+        for w in sorted(e.winners):
             winS += "%s " % b.names[w]
         return winS
 
@@ -66,7 +87,7 @@ class Test:
                 msg += "%s\n\n" % m
                 #print msg
                 self.times[file] = (sdelta, mdelta)
-                if s != m:
+                if s[3:] != m[3:]:
                     self.diff[file] = msg
                 cur += 1
         print "Files with differing results:"

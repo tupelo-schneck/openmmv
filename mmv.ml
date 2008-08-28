@@ -200,7 +200,9 @@ let adjust_ballot_priority (g:game) (bp:ballot_priority)
   end bp
 
 let adjust_ballot (g:game) (b:ballot) : unit =
+  let share = share g in
   let rec loop_priorities priorities flat_sofar spent_sofar =
+    if spent_sofar >= share then () else
     begin match priorities with
       | [] -> ()
       | bp::bps ->
