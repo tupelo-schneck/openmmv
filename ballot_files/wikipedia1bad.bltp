@@ -1,0 +1,16 @@
+# 63 out of 120 voters want ABC in some order, yet B is first eliminated
+6 5
+30 A C B J 0
+30 C A B J 0
+ 3 B A C J 0
+20 D S J B 0
+20 S D J B 0
+17 J D S B 0
+0
+A
+B
+C
+D
+S
+J
+"Droop quota - Wikipedia"
