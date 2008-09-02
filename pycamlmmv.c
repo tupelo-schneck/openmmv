@@ -87,10 +87,13 @@ PyFundingLevel_of_ml_funding_level(value v)
   if (class_FundingLevel == NULL) {
     PyRun_SimpleString("pycamlmmv.register_class(elections.FundingLevel)");
   }
-  tmp = Py_BuildValue("(fff)",
+  tmp = Py_BuildValue("(ffffff)",
 		      Double_field(v,0),
 		      Double_field(v,1),
-		      Double_field(v,2));
+		      Double_field(v,2),
+		      Double_field(v,3),
+		      Double_field(v,4),
+		      Double_field(v,5));
   res = PyInstance_New(class_FundingLevel,
 		       tmp,
 		       NULL);
@@ -104,15 +107,24 @@ ml_funding_level_of_PyFundingLevel(PyObject* p)
   CAMLparam0();
   CAMLlocal1(res);
   PyObject* tmp;
-  res = caml_alloc(3 * Double_wosize, Double_array_tag);
+  res = caml_alloc(6 * Double_wosize, Double_array_tag);
   tmp = PyObject_GetAttrString(p,"amount");
   Store_double_field(res,0,PyFloat_AsDouble(tmp));
   Py_DECREF(tmp);
-  tmp = PyObject_GetAttrString(p,"support");
+  tmp = PyObject_GetAttrString(p,"size");
   Store_double_field(res,1,PyFloat_AsDouble(tmp));
   Py_DECREF(tmp);
-  tmp = PyObject_GetAttrString(p,"prevSupport");
+  tmp = PyObject_GetAttrString(p,"vote");
   Store_double_field(res,2,PyFloat_AsDouble(tmp));
+  Py_DECREF(tmp);
+  tmp = PyObject_GetAttrString(p,"lastVote");
+  Store_double_field(res,3,PyFloat_AsDouble(tmp));
+  Py_DECREF(tmp);
+  tmp = PyObject_GetAttrString(p,"support");
+  Store_double_field(res,4,PyFloat_AsDouble(tmp));
+  Py_DECREF(tmp);
+  tmp = PyObject_GetAttrString(p,"lastSupport");
+  Store_double_field(res,5,PyFloat_AsDouble(tmp));
   Py_DECREF(tmp);
   CAMLreturn(res);
 }
@@ -210,7 +222,13 @@ PyObject* gPyBallotItems;
 value
 ml_ballot_priority_of_key(PyObject* p)
 {
-  return ml_list_of_PyList(PyDict_GetItem(gPyBallotItems,p), ml_ballot_item_of_PyBallotItem);
+  CAMLparam0();
+  CAMLlocal1(res);
+  res = caml_alloc(1,0);
+  Store_field(res,0,
+	      ml_list_of_PyList(PyDict_GetItem(gPyBallotItems,p), 
+				ml_ballot_item_of_PyBallotItem));
+  CAMLreturn(res);
 }
 
 value
@@ -256,7 +274,7 @@ PyBallot_gets_ml_ballot(PyObject* p, value v)
   priorities = Field(v,3);
   for (i = 0; i < PyList_Size(keys); i++) {
     items = PyDict_GetItem(tmp,PyList_GetItem(keys,i));
-    mlitems = Field(priorities,0);
+    mlitems = Field(Field(priorities,0),0);
     for (j = 0; j < PyList_Size(items); j++) {
       PyBallotItem_gets_ml_ballot_item(PyList_GetItem(items,j), Field(mlitems,0));
       mlitems = Field(mlitems,1);
@@ -274,7 +292,7 @@ ml_game_of_PyElection(PyObject* p)
   CAMLlocal1(res);
   PyObject* tmp;
   PyObject* values;
-  res = caml_alloc(6,0);
+  res = caml_alloc(9,0);
   tmp = PyObject_GetAttrString(p,"totalResources");
   Store_field(res,0,caml_copy_double(PyFloat_AsDouble(tmp)));
   Py_DECREF(tmp);
@@ -297,6 +315,9 @@ ml_game_of_PyElection(PyObject* p)
   tmp = PyObject_GetAttrString(p,"roundToNearest");
   Store_field(res,5,caml_copy_double(PyFloat_AsDouble(tmp)));
   Py_DECREF(tmp);
+  Store_field(res,6,caml_copy_double(0.0));
+  Store_field(res,7,caml_copy_double(0.0));
+  Store_field(res,8,caml_copy_double(0.0));
   CAMLreturn(res);
 }
 

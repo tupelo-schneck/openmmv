@@ -1,19 +1,28 @@
 (* TODO: what to do with non-transferable? *)
 
+let epsilon = 0.000000001
+
 type currency = float
 type support = float
 type utility = currency -> currency -> currency -> support (* flat_before, spent_before, flat_here *)
 
 type funding_level = {
   mutable pamount : currency; (* mutable for ease of elimination *)
+  mutable psize : currency; (* amount - size is next lowest funding level *)
+  mutable pvote : currency;
+  mutable plast_vote : currency;
   mutable psupport : support;
-  mutable pprev_support : support;
+  mutable plast_support : support;
+  (* keep_value is quota_support / plast_support *)
 }
 
-let new_initial_funding_level amount = {
+let new_initial_funding_level amount prior = {
   pamount = amount;
+  psize = amount -. prior;
+  pvote = 0.;
+  plast_vote = 0.;
   psupport = 0.;
-  pprev_support = 0.;
+  plast_support = 0.;
 }
 
 type project = {
@@ -28,49 +37,66 @@ type project = {
 type ballot_item = {
   bprojectid : int;
   bamount : currency;
-  prior : currency; (* how much has already gone to this project on this ballot *)
+  bprior : currency; (* how much has already gone to this project on this ballot *)
   mutable actual_amount : currency; 
   mutable bsupport : support;
   mutable contribution : currency;
+
   mutable project : project option;
 }
 
-type ballot_priority = ballot_item list
+type ballot_priority = {
+  mutable items : ballot_item list
+}
 
 type ballot = {
   ballotid : int;
   bname : string;
   weight : float;
-  priorities : ballot_priority list;
+  mutable priorities : ballot_priority list;
 }
 
 type game = {
   total : currency;
   projects : project list;
-  utility : utility;
+  utility : utility option;
   quota : float; (* a fraction of the number of players *)
-  ballots : ballot list;
+  mutable ballots : ballot list;
   round_to_nearest : currency; (* used for project funding levels *)
+
+  mutable quota_support : support;
+  mutable share : currency;
+  mutable half_round_to_nearest : currency;
 }
+
+(* really more of a floor *)
+let round (g:game) (f:float) =
+  floor (f /. g.round_to_nearest) *. g.round_to_nearest
 
 let float_players (g:game) : float = 
   let res = ref 0. in
   List.iter (fun b -> res := !res +. b.weight) g.ballots;
   !res
 
-let quota_support (g:game) : support =
-  max 1.0 (g.quota *. float_players g)
-
-let share (g:game) : currency =
-  g.total /. float_players g
+let initialize_game (g:game) : unit =
+  let players = float_players g in
+  g.quota_support <- max 1.0 (g.quota *. players);
+  g.share <- g.total /. players;
+  g.half_round_to_nearest <- g.round_to_nearest /. 2.
 
 let support (g:game) (flat_before:currency) (spent_before:currency) (flat_here:currency) : support =
-  let share = share g in
-  let spend_limit = share -. spent_before in
-  if spend_limit <= 0. then 0. else
-  let support = g.utility (flat_before /. share) (spent_before /. share) (flat_here /. share) in
-  let support = max 0. support in
-  if support *. flat_here > spend_limit then spend_limit /. flat_here else support
+  let spend_limit = g.share -. spent_before in
+  if spend_limit <= epsilon then 0. else
+    begin match g.utility with
+      | None -> 
+	  if flat_here > spend_limit then spend_limit /. flat_here else 1.0
+      | Some f ->
+	  let support = 
+	    f (flat_before /. g.share) (spent_before /. g.share) (flat_here /. g.share)
+	  in
+	  let support = max 0. support in
+	  if support *. flat_here > spend_limit then spend_limit /. flat_here else support
+    end
 
 let project_for_ballot_item (g:game) (b:ballot_item) : project =
   begin match b.project with
@@ -84,51 +110,47 @@ let project_for_ballot_item (g:game) (b:ballot_item) : project =
   end
 
 let spent_on_ballot_priority (bp:ballot_priority) : currency =
-  let rec aux bs acc =
-    begin match bs with
-      | [] -> acc
-      | b::bs -> aux bs (acc +. b.contribution)
-    end
-  in
-  aux bp 0.
+  List.fold_left (fun acc b -> acc +. b.contribution) 0. bp.items
 
 let flat_on_ballot_priority (bp:ballot_priority) : currency =
-  let rec aux bs acc =
-    begin match bs with
-      | [] -> acc
-      | b::bs -> aux bs (acc +. if b.bsupport = 0. then 0. else b.contribution /. b.bsupport)
-    end
-  in
-  aux bp 0.
+  List.fold_left (fun acc b -> acc +. 
+		    if b.bsupport <= 0. then 0. else b.contribution /. b.bsupport) 0. bp.items
 
 let spent_on_ballot (b:ballot) : currency =
-  let rec aux bs acc =
-    begin match bs with
-      | [] -> acc
-      | b::bs -> aux bs (acc +. spent_on_ballot_priority b)
-    end
-  in
-  b.weight *. aux b.priorities 0.
+  b.weight *. List.fold_left (fun acc bp -> acc +. spent_on_ballot_priority bp) 0. b.priorities
 
 (* Insert a new funding level for project p of the given amount *)
 let add_new_funding_level_if_needed (p:project) (amount:currency) : unit =
   if amount >= p.eliminated then () else
-  let new_funding_level f_opt = 
+  let new_funding_level f_opt prior = 
     begin match f_opt with
-      | None -> new_initial_funding_level amount
-      | Some f -> {f with pamount = amount}
+      | None -> new_initial_funding_level amount prior
+      | Some f -> 
+	  let old_size = f.psize in
+	  let f_size = f.pamount -. amount in
+	  let new_size = amount -. prior in
+	  let old_vote = f.pvote in
+	  let old_last_vote = f.plast_vote in
+	  f.pvote <- old_vote *. f_size /. old_size;
+	  f.plast_vote <- old_last_vote *. f_size /. old_size;
+	  f.psize <- f_size;
+	  {f with 
+	     pvote = old_vote *. new_size /. old_size; 
+	     plast_vote = old_last_vote *. new_size /. old_size;
+	     pamount = amount; 
+	     psize = new_size}
     end 
   in
-  let rec loop (before:funding_level list) (after:funding_level list) : unit =
+  let rec loop (before:funding_level list) (after:funding_level list) (prior:currency) : unit =
     begin match after with
-      | [] -> p.fundings <- List.rev_append before [new_funding_level None]
+      | [] -> p.fundings <- List.rev_append before [new_funding_level None prior]
       | f :: fs ->
-	  if f.pamount < amount then loop (f :: before) fs
+	  if f.pamount < amount then loop (f :: before) fs f.pamount
 	  else if f.pamount = amount then ()
-	  else p.fundings <- List.rev_append before (new_funding_level (Some f) :: after)
+	  else p.fundings <- List.rev_append before (new_funding_level (Some f) prior :: after)
     end
   in
-  loop [] p.fundings
+  loop [] p.fundings 0.
 
 let add_support_for_ballot_item (g:game) (b:ballot_item) (weight:float) : unit =
   let p = project_for_ballot_item g b in
@@ -137,9 +159,12 @@ let add_support_for_ballot_item (g:game) (b:ballot_item) (weight:float) : unit =
       | [] -> ()
       | f :: fs -> 
 	  if f.pamount > p.eliminated || f.pamount > b.actual_amount then ()
-	  else if f.pamount <= b.prior then loop fs
+	  else if f.pamount <= b.bprior then loop fs
 	  else begin
 	    f.psupport <- f.psupport +. weight *. b.bsupport;
+	    let f_support = max g.quota_support f.plast_support in
+	    f.pvote <- f.pvote +. weight *. b.bsupport *.
+	      f.psize /. f_support;
 	    loop fs
 	  end
     end
@@ -154,29 +179,28 @@ let get_flat_contribution_of_ballot_item (g:game) (b:ballot_item) : unit =
   let p = project_for_ballot_item g b in
   add_new_funding_level_if_needed p b.bamount;
   b.bsupport <- 1.;
-  let rec loop fs prior sofar =
+  b.actual_amount <- 0.;
+  b.contribution <- 0.;
+  let rec loop fs =
     begin match fs with
-      | [] -> 
-	  b.actual_amount <- prior;
-	  b.contribution <- sofar
+      | [] -> ()
       | f :: fs ->
 	  (* if eliminated or past what this voter wants, done *)
-	  if f.pamount > p.eliminated || f.pamount > b.bamount then begin
-	    b.actual_amount <- prior;
-	    b.contribution <- sofar
-	  end
+	  if f.pamount > p.eliminated || f.pamount > b.bamount then ()
 	  (* skipping over funding levels below b.prior *)
-	  else if f.pamount <= prior then loop fs prior sofar
-	  (* at this point, we're looking at a real funding level between prior
+	  else if f.pamount <= b.bprior then loop fs
+	  (* at this point, we're looking at a real funding level between b.bprior
 	     and b.bamount *)
-	  else 
-	    (* use quota_support for projects below quota *)
-	    let f_support = max f.pprev_support (quota_support g) in
-	    let this_contribution = (f.pamount -. prior) /. f_support in
-	    loop fs f.pamount (sofar +. this_contribution)
+	  else begin
+	    b.actual_amount <- f.pamount;
+	    let f_support = max g.quota_support f.plast_support in
+	    let this_contribution = f.psize /. f_support in
+	    b.contribution <- b.contribution +. this_contribution;
+	    loop fs
+	  end
     end
   in
-  loop p.fundings b.prior 0.
+  loop p.fundings
 
 let adjust_ballot_item (g:game) (b:ballot_item) (flat_sofar:currency) (spent_sofar:currency) 
   (weight:float) : unit =
@@ -189,26 +213,25 @@ let adjust_ballot_item (g:game) (b:ballot_item) (flat_sofar:currency) (spent_sof
  * This function is for dealing with tied items on a ballot
  **********************************************************************)
 let adjust_ballot_priority (g:game) (bp:ballot_priority) 
-  (flat_sofar:currency) (spent_sofar:currency) (weight:float) : unit =
-  List.iter (get_flat_contribution_of_ballot_item g) bp;
+  (flat_sofar:currency) (spent_sofar:currency) (weight:float) : currency * currency =
+  List.iter (get_flat_contribution_of_ballot_item g) bp.items;
   let flat_here = spent_on_ballot_priority bp in
   let support = support g flat_sofar spent_sofar flat_here in
   List.iter begin fun b ->
     b.bsupport <- support;
     b.contribution <- support *. b.contribution;
     add_support_for_ballot_item g b weight
-  end bp
+  end bp.items;
+  flat_here, support *. flat_here
 
 let adjust_ballot (g:game) (b:ballot) : unit =
-  let share = share g in
   let rec loop_priorities priorities flat_sofar spent_sofar =
-    if spent_sofar >= share then () else
+    if g.share -. spent_sofar <= epsilon then () else
     begin match priorities with
       | [] -> ()
       | bp::bps ->
-	  adjust_ballot_priority g bp flat_sofar spent_sofar b.weight;
-	  let spent_here = spent_on_ballot_priority bp in
-	  let flat_here = flat_on_ballot_priority bp in
+	  let flat_here, spent_here = adjust_ballot_priority g bp flat_sofar spent_sofar b.weight
+	  in
 	  loop_priorities bps (flat_sofar +. flat_here) (spent_sofar +. spent_here)
     end
   in
@@ -216,9 +239,11 @@ let adjust_ballot (g:game) (b:ballot) : unit =
 
 let renew_project_supports (p:project) : unit =
   List.iter begin fun f -> 
-	       f.pprev_support <- f.psupport; 
-	       f.psupport <- 0.;
-	     end p.fundings
+    f.plast_support <- f.psupport;
+    f.psupport <- 0.;
+    f.plast_vote <- f.pvote;
+    f.pvote <- 0.
+  end p.fundings
 
 (**********************************************************************
  * Perform one iteration over all ballots
@@ -230,10 +255,9 @@ let one_iteration (g:game) : unit =
 
 (**********************************************************************
  * Perform an elimination.
- * Currently it changes the amount of the funding level to $1 less.
- * TODO: consider a faster search for elimination level...
+ * Precondition: f is largest funding level of p
  **********************************************************************)
-let eliminate (g:game) (p:project) (f:funding_level) (prior:currency) : unit =
+let eliminate (g:game) (p:project) (f:funding_level) (new_amount:currency) : unit =
 (*  let t = Util.process_time () in
   print_string "Elimination at ";
   print_float t;
@@ -242,96 +266,109 @@ let eliminate (g:game) (p:project) (f:funding_level) (prior:currency) : unit =
 *)  
   p.eliminated <- f.pamount;
   if f.pamount <= p.minimum then p.fundings <- [] else begin
-    let new_amount = f.pamount -. g.round_to_nearest in
+    let new_amount = min new_amount (f.pamount -. g.round_to_nearest) in
+    let new_amount = round g new_amount in
     let new_amount = if new_amount < p.minimum then p.minimum else new_amount in
-    if new_amount <= prior then p.fundings <- List.filter (fun f' -> f' != f) p.fundings
-    else f.pamount <- new_amount
+    if new_amount <= f.pamount -. f.psize 
+    then p.fundings <- List.filter (fun f' -> f' != f) p.fundings
+    else begin
+      let old_size = f.psize in
+      f.psize <- old_size -. f.pamount +. new_amount;
+      f.pamount <- new_amount;
+      f.pvote <- f.pvote *. f.psize /. old_size;
+      f.plast_vote <- f.plast_vote *. f.psize /. old_size
+    end
   end
 
-(********************************************************************** 
- * Say that there has been a change when the total change over all 
- * projects and funding levels is more than g.round_to_nearest
- **********************************************************************)
-let change_in_projects (g:game) : bool =
-  let rec loop_funding_levels fs prior sofar =
-    if sofar >= g.round_to_nearest /. 2. then g.round_to_nearest /. 2. else
+let surplus_or_change ?(change:bool=false) ?(limit:currency = infinity) (g:game) : currency =
+  let rec loop_funding_levels fs sofar =
+    if sofar >= limit then limit else
     begin match fs with
       | [] -> sofar
       | f::fs -> 
-	  let low = min f.psupport f.pprev_support in
-	  let high = max f.psupport f.pprev_support in
-	  let f_support = max low (quota_support g) in
-	  let contrib = (high -. low) /. f_support *. (f.pamount -. prior) in
-	  loop_funding_levels fs f.pamount (sofar +. contrib)
+	  let contribution = 
+	    if change then abs_float (f.pvote -. f.plast_vote)
+	    else max 0. (f.pvote -. f.psize)
+	  in
+	  loop_funding_levels fs (sofar +. contribution)
     end
   in
   let rec loop_projects ps sofar =
-    if sofar >= g.round_to_nearest /. 2. then true else
+    if sofar >= limit then limit else
     begin match ps with
-      | [] -> false
+      | [] -> sofar
       | p::ps ->
-	  loop_projects ps (loop_funding_levels p.fundings 0. sofar)
+	  loop_projects ps (loop_funding_levels p.fundings sofar)
     end
   in
   loop_projects g.projects 0.
 
+let surplus (g:game) : currency = surplus_or_change g
+
+let change_in_projects (g:game) : bool =
+  surplus_or_change g ~change:true ~limit:g.half_round_to_nearest >= g.half_round_to_nearest
+
 (* None if exclusion made; Some change otherwise *)
 (* Need to find lowest, next lowest, surplus *)
 let short_cut_exclusion_search (g:game) (* : currency option *) =
-  let quota_support = quota_support g in
-  let surplus = ref 0. in
+  let surplus = surplus g in
   let lowest = ref [] in
-  let rec consider_funding_levels p fs prior dist_accum res =
+  let rec consider_funding_levels p fs dist_accum res =
     begin match fs with
       | [] -> res
       | f :: fs ->
-	  if f.pamount < p.eliminated && f.psupport > 0. then begin
-	    if f.psupport >= quota_support then begin
-	      let f_support = max f.pprev_support quota_support in
-	      surplus := !surplus +. f.psupport /. f_support *. (f.pamount -. prior) -. f.pamount +. prior;
-	      consider_funding_levels p fs f.pamount 0. None
+	  if f.pamount < p.eliminated && f.pvote > 0. then begin
+	    if f.pvote >= f.psize then begin
+	      consider_funding_levels p fs 0. None
 	    end else begin
-	      let dist = dist_accum +. (1. -. f.psupport /. quota_support) *. (f.pamount -. prior) in
+	      let dist = dist_accum +. f.psize -. f.pvote in 
 	      (* don't eliminate something which is only one half-dollar from quota *)
 	      (* unless it's a very small level *)
-	      if dist > g.round_to_nearest /. 2. || dist > 0.1 *. f.pamount then
-		consider_funding_levels p fs f.pamount dist (Some (p,f,prior,dist))
+	      if dist > g.half_round_to_nearest || dist > 0.1 *. f.pamount then
+		consider_funding_levels p fs dist (Some (p,f,dist))
 	      else
-		consider_funding_levels p fs f.pamount dist res
+		consider_funding_levels p fs dist res
 	    end	
 	  end
 	  else res
     end
   in
+  let cmp (_,f1,dist1) (_,f2,dist2) =
+    let res =
+      if dist1 = dist2 then f2.pamount -. f1.pamount else dist2 -. dist1
+    in
+    if res < 0. then -1 
+    else if res = 0. then 0
+    else 1
+  in
   let consider_project p =
-    begin match consider_funding_levels p p.fundings 0. 0. None with
+    begin match consider_funding_levels p p.fundings 0. None with
       | None -> ()
-      | Some ((_,f,_,dist) as candidate) ->
+      | Some candidate ->
+	  lowest := List.merge cmp [candidate] !lowest;
 	  begin match !lowest with
-	    | [] ->
-		lowest := [candidate]
-	    | ((_,f',_,dist') as last_lowest)::rest ->
-		if dist > dist' ||
-		  (dist = dist' && f.pamount > f'.pamount) then
-		    lowest := [candidate; last_lowest]
-		else begin match rest with
-		  | [] ->
-		      lowest := [last_lowest; candidate]
-		  | (_,f',_,dist')::_ ->
-		      if dist > dist' then
-			lowest := [last_lowest; candidate]
-		end
-	  end;
+	    | a::b::_::_ -> lowest := [a;b]
+	    | _ -> ()
+	  end
     end
   in
   List.iter consider_project g.projects;
   begin match !lowest with
-    | [(p,f,prior,dist); (_,_,_,dist')] when dist -. !surplus > dist' ->
-	eliminate g p f prior;
+    | [(p,f,dist); (_,_,dist')] when dist -. surplus > dist' ->
+(* Here we calculate the new amount which is lowest such that if you gave it
+ * all the surplus, it would still be farther than dist'.  The fiddly calculation
+ * is because amount, size and vote all change for the funding level *)
+	let new_amount_num = 
+	  f.psize *. (dist' +. surplus -. dist +. f.pamount) -. f.pvote *. f.pamount
+	in
+	let new_amount_den = f.psize -. f.pvote in
+	let new_amount = new_amount_num /. new_amount_den in
+	eliminate g p f new_amount;
 	None
     | _ -> 
-	Some (!surplus,!lowest)
+	Some (surplus,!lowest)
   end
+
 
 (**********************************************************************
  * Iterate while large enough changes are occuring
@@ -345,34 +382,34 @@ let rec many_iterations (g:game) : unit =
  **********************************************************************)
 let eliminate_worst_funding_level ?(even_if_close:bool=false) (g:game) : bool =
   let best = ref None in
-  let rec consider_funding_levels p fs prior dist_accum =
+  let rec consider_funding_levels p fs dist_accum =
     begin match fs with
       | [] -> ()
       | f :: fs ->
-	  if f.pamount < p.eliminated && f.psupport > 0. then begin
-	    let dist = dist_accum +. (1. -. f.psupport /. quota_support g) *. (f.pamount -. prior) in
+	  if f.pamount < p.eliminated && f.pvote > 0. then begin
+	    let dist = dist_accum +. f.psize -. f.pvote in
 	    let dist = max 0. dist in
 	    (* don't eliminate something which is only one half-dollar from quota *)
 	    (* unless it's a very small level *)
-	    if dist > (if even_if_close then 0. else g.round_to_nearest /. 2.) 
+	    if dist > (if even_if_close then 0. else g.half_round_to_nearest) 
 	      || dist > 0.1 *. f.pamount then
 	      begin match !best with
 		| None ->
-		    best := Some (p,f,prior,dist)
-		| Some (_,f',_,dist') ->
+		    best := Some (p,f,dist)
+		| Some (_,f',dist') ->
 		    if dist > dist' ||
 		      (dist = dist' && f.pamount > f'.pamount) then
-			best := Some (p,f,prior,dist)
+			best := Some (p,f,dist)
 	      end;
-	    consider_funding_levels p fs f.pamount dist
+	    consider_funding_levels p fs dist
 	  end
     end
   in
-  List.iter (fun p -> consider_funding_levels p p.fundings 0. 0.) g.projects;
+  List.iter (fun p -> consider_funding_levels p p.fundings 0.) g.projects;
   begin match !best with
     | None -> false
-    | Some (p,f,prior,dist) ->
-	eliminate g p f prior;
+    | Some (p,f,dist) ->
+	eliminate g p f (f.pamount -. g.round_to_nearest);
 	true
   end
 
@@ -382,7 +419,7 @@ let total_winners (g:game) : currency =
     begin match fs with
       | [] -> best_with_nonzero_support
       | f::fs -> 
-	  if f.psupport <= 0. 
+	  if f.pvote <= 0. 
 	  then best_with_nonzero_support 
 	  else loop_fundings fs f.pamount
     end
@@ -395,7 +432,7 @@ let eliminate_zero_support_projects (g:game) : unit =
     begin match p.fundings with
       | [] -> p.eliminated <- 0.
       | f::_ -> 
-	  if f.psupport <= 0. then begin
+	  if f.pvote <= 0. then begin
 	    p.eliminated <- 0.;
 	    p.fundings <- []
 	  end
@@ -403,6 +440,7 @@ let eliminate_zero_support_projects (g:game) : unit =
   end g.projects
 
 let play' (g:game) : unit =
+  initialize_game g;
   many_iterations g;
   while eliminate_worst_funding_level g do many_iterations g done
 
@@ -413,14 +451,15 @@ let rec play (g:game) : unit =
   print_endline " seconds";
   flush stdout;
 *)
+  initialize_game g;
   one_iteration g;
   while
     begin match short_cut_exclusion_search g with
       | None -> true
       | Some (_,[]) -> false
       | Some (surplus,_) when surplus >= g.round_to_nearest /. 10. -> true
-      | Some (_, (p,f,prior,_)::_) ->
-	  eliminate g p f prior; true
+      | Some (_, (p,f,_)::_) ->
+	  eliminate g p f (f.pamount -. g.round_to_nearest); true
     end
   do 
     one_iteration g

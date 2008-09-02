@@ -2,24 +2,28 @@
 
 import operator
 import bltp
+import pycamlmmv
 
 class FundingLevel:
     """
     A specific funding level of a project.  Variables include:
     amount (float)      - The dollar amount
-    support (float)     - The number of supporters at that dollar amount
-    nweSupport (float)  - A holding variable used during vote counting
+    size (float)        - How much in this funding level (amount - size = prior amount)
+    vote (float)        - How much voters have contributed; wins when vote >= size
+    lastVote (float)    - How much had been contributed last iteration
+    support (float)     - How much support voters have given this
+    lastSupport (float) - How much support last iteration
     """
-    def __init__(self, amount, support, prevSupport=None):
+    def __init__(self, amount, size, vote=0., lastVote = 0., support = 0., lastSupport = 0.):
         self.amount = float(amount)
+        self.size = float(size)
+        self.vote = float(vote)
+        self.lastVote = float(lastVote)
         self.support = float(support)
-        self.prevSupport = float(prevSupport)
+        self.lastSupport = float(lastSupport)
     
     def __str__(self):
-        return "%.2f support at $%.2f" % (self.support, self.amount)
-
-# needs to be after the FundingLevel declaration for C import
-import pycamlmmv
+        return "$%.2f/$%.2f support at $%.2f" % (self.vote, self.size, self.amount)
 
 class Project:
     """
@@ -196,9 +200,8 @@ class Election:
                 topLevel = project.fundings[-1]
             except:
                 continue
-            if topLevel.support > (self.quota / 100):
-                funding = (project.id, project.name, topLevel.amount)
-                r.append(funding)
+            funding = (project.id, project.name, topLevel.amount)
+            r.append(funding)
         self.results = None
         self.results = Results(r)
     

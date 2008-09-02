@@ -20,6 +20,25 @@ class MeekSTVNoDefaultWinners(stv.MeekSTV):
         if self.purgatory == []:
             desc = "The election is over since all candidates have won or been eliminated"
             return (True, desc)
+
+        for c in self.purgatory[:]:
+            if self.count[self.R][c] < 0.9 * self.thresh[self.R]:
+                return (False, "")
+
+        # Every candidate remaining with >90%-quota votes is a winner.
+        if len(self.purgatory + self.winners) <= self.b.nSeats:
+            desc = "The election is over since the number of candidates remaining "\
+                   "is equal to the number of seats. "
+            winners = []
+            losers = []
+            for c in self.purgatory[:]:
+                if self.count[self.R][c] > 0:
+                    winners.append(c)
+                else:
+                    losers.append(c)
+            desc += self.newWinners(winners, "under")
+            self.newLosers(losers)
+            return (True, desc)
                 
         # Not done yet.
         return (False, "")
@@ -38,12 +57,13 @@ def print_timing(func):
 
 class Test:
     def __init__(self, path="ballot_files/ICPSR_election_data/blt/",
-                    max=float('inf'), file=None):
+                    max=float('inf'), file=None, randomize=False):
         self.path = path
         self.max = max
         self.file = file
         self.diff = {}
         self.times = {}
+        self.randomize = randomize
     
     @print_timing
     def runSTV(self, file):
@@ -65,13 +85,13 @@ class Test:
             winM += "%s " %item[1]
         return winM
 
-    def runRandomTests(self):
+    def runTests(self):
         # for each election, run with openmmv and openstv and print results
         if self.file:
             files = [self.file]
         else:
             files = os.listdir(self.path)
-        random.shuffle(files)
+        if self.randomize: random.shuffle(files)
         self.diff = {}
         self.times = {}
         cur = 0
@@ -91,14 +111,14 @@ class Test:
                     self.diff[file] = msg
                 cur += 1
         print "Files with differing results:"
-        for msg in self.diff.values():
+        for _, msg in sorted(self.diff.items()):
             print msg
         print "\nTimings (in milliseconds):\nFilename\tSTV time\tMMV time\tSTV-MMV"
         print "========================================================"
-        for t in self.times.keys():
+        for t in sorted(self.times.keys()):
             s, m = self.times[t]
             print "%s\t\t%4.3f\t\t%4.3f\t\t%4.3f" % (t, s, m, s-m)
 
 if __name__ == "__main__":
-    t = Test(max=4)
-    t.runRandomTests()
+    t = Test(max=100,randomize=False)
+    t.runTests()

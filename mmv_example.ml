@@ -46,10 +46,11 @@ let position_to_item n =
   let p = List.nth projects n in
   { bprojectid = p.projectid;
     bamount = p.maximum ;
-    prior = 0.;
+    bprior = 0.;
     actual_amount = 0.;
     bsupport = 0.;
-    contribution = 0. }
+    contribution = 0.;
+    project = None}
 
 let list_to_priorities l =
   let pairs = 
@@ -63,7 +64,7 @@ let list_to_priorities l =
   in
   let sorted_pairs = List.sort (fun (a,_) (b,_) -> compare a b) pairs in
   let _,items = List.split sorted_pairs in
-  List.map (fun bi -> [bi]) items
+  List.map (fun bi -> {items = [bi]}) items
 
 let ballots =
   let rec aux n bs =
@@ -91,19 +92,22 @@ let fix_util f a x b = max (f a x b) 1.
 let game =
   {total = 190.;
    projects = projects;
-   utility = utility1;
+   utility = Some utility1;
    quota = 6. /. 25.;
    ballots = ballots;
-   round_to_nearest = 1.}
+   round_to_nearest = 1.;
+   quota_support = 6.;
+   share = 190. /. 25.;
+   half_round_to_nearest = 0.5}
 
 let print_ballot ?(all=false) b =
-  let id_to_name n = String.make 1 (Char.chr(n + Char.code 'A')) in
+  let id_to_name n = String.make 1 (Char.chr(n - 1 + Char.code 'A')) in
   Printf.printf "\nBallot: %s\n" b.bname;
   List.iter (fun bp ->
 	       List.iter (fun bi ->
 			    if bi.contribution > 0. || all then
 			      Printf.printf "%s: $%.2f [%.2f]\n" (id_to_name bi.bprojectid) bi.contribution bi.bsupport)
-	       bp) b.priorities
+	       bp.items) b.priorities
 
 let total_contributions_to_project_named g pname =
   let projectid = (List.find (fun p -> p.pname = pname) g.projects).projectid 
@@ -113,13 +117,13 @@ let total_contributions_to_project_named g pname =
     if bi.bprojectid = projectid 
     then res := !res +. b.weight *. bi.contribution 
   in
-  List.iter (fun b -> List.iter (fun bp -> List.iter (do_item b) bp) 
+  List.iter (fun b -> List.iter (fun bp -> List.iter (do_item b) bp.items) 
              b.priorities) g.ballots;
   !res
 
 let find_ballot_item which b =
   let find_in_bp bp =
-    List.find (fun bi -> bi.bprojectid = which) bp
+    List.find (fun bi -> bi.bprojectid = which) bp.items
   in
   let rec aux bps =
     begin match bps with
@@ -147,7 +151,7 @@ let winners game =
   List.filter (fun p -> p.fundings <> [] && (List.hd p.fundings).pamount < p.eliminated) game.projects
 
 let winners' game =
-  List.filter (fun p -> p.fundings <> [] && (List.hd p.fundings).psupport >= quota_support game) game.projects
+  List.filter (fun p -> p.fundings <> [] && (List.hd p.fundings).psupport >= game.quota_support) game.projects
 
 
 (*
