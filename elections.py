@@ -101,6 +101,17 @@ class Ballot:
             self.ballotItems[oldRank].remove(item)
         except:
             print "change BI rank error: oldRank invalid"
+        self.set_priors()
+
+    def set_priors(self):
+        priors = {}
+        for rank in sorted(self.ballotItems.keys()):
+            for item in self.ballotItems[rank]:
+                if priors.has_key(item.projectId):
+                    item.priorProposedFunding = priors[item.projectId]
+                else:
+                    item.priorProposedFunding = 0.0
+                priors[item.projectId] = item.proposedFunding
     
     def create_nest_list(self):
         """Creates a list of lists of BallotItems, ordered by rank"""
@@ -128,18 +139,26 @@ class Results:
     """
     Results of an election.  This is a class mostly to take advantage of the
     string formatting functions of python.  Variables include:
-    list (list)     - list of (project ID, project name, final funding) tuples
+    election (Election instance) - the election we come from
+    list (list)     - list of (project ID, funding, is_winner:bool) tuples
+    *** The list is stored in reverse order
     """
     
-    def __init__(self, list):
+    def __init__(self, election, list):
+        self.election = election
         self.list = list
     
     def __str__(self):
         str = "-----ELECTION RESULTS-----\nProject\t\t\tFunding Level\n"
-        for p in self.list:
-            str += "%s\t\t\t%.2f\n" % (p[1], p[2])
+        for p in self.winners():
+            str += "%s\t\t\t%.2f\n" % (self.election.projects[p[0]].name, p[1])
         str += "\n\n"
         return str
+
+    def winners(self): 
+        res = [x for x in self.list if x[2]]
+        res.reverse()
+        return res
 
 class Election:
     """
@@ -162,7 +181,7 @@ class Election:
         self.totalResources = 0.0
         self.quota = 0.0
         self.roundToNearest = 0.0
-        self.results = None
+        self.results = Results(self,[])
         if bltp is not None:
             self.import_bltp(bltp)
     
@@ -176,7 +195,10 @@ class Election:
         self.roundToNearest = 0.0
     
     def import_bltp(self, filename):
+        self.results.list = []
         bltp.import_bltp(self, filename)
+        for b in self.ballots.values():
+            b.set_priors()
 
     def export_bltp(self, filename):
         bltp.export_bltp(self, filename)
@@ -186,24 +208,11 @@ class Election:
         pass
     
     def run_election(self):
+        self.results.list = []
         for p in self.projects.values():
             p.eliminated = float("inf")
             p.fundings = []
         pycamlmmv.run_election(self)
-        self.store_results()
-    
-    def store_results(self):
-        # create self.results
-        r = []
-        for project in self.projects.values():
-            try:
-                topLevel = project.fundings[-1]
-            except:
-                continue
-            funding = (project.id, project.name, topLevel.amount)
-            r.append(funding)
-        self.results = None
-        self.results = Results(r)
     
     def get_item_by_name(self, name, itemDict):
         """Search given itemDict for named item and return the instance"""

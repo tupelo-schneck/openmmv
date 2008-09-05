@@ -72,7 +72,7 @@ class Test:
         e = MeekSTVNoDefaultWinners(b, threshName=("Hare", "Static", "Fractional"))
         e.runElection()
         winS = "STV election winners: "
-        for w in sorted(e.winners):
+        for w in e.winners:
             winS += "%s " % b.names[w]
         return winS
 
@@ -81,8 +81,8 @@ class Test:
         e = elections.Election(file)
         e.run_election()
         winM = "MMV election winners: "
-        for item in e.results.list:
-            winM += "%s " %item[1]
+        for item in e.results.winners():
+            winM += "%s " % e.projects[item[0]].name
         return winM
 
     def runTests(self):

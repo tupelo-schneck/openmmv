@@ -56,6 +56,12 @@ type ballot = {
   mutable priorities : ballot_priority list;
 }
 
+type result_item = {
+  rprojectid : int;
+  ramount : currency;
+  rwinner : bool;
+}
+
 type game = {
   total : currency;
   projects : project list;
@@ -67,6 +73,9 @@ type game = {
   mutable quota_support : support;
   mutable share : currency;
   mutable half_round_to_nearest : currency;
+  mutable surplus_precision : currency;
+  
+  mutable results : result_item list;
 }
 
 (* really more of a floor *)
@@ -80,9 +89,14 @@ let float_players (g:game) : float =
 
 let initialize_game (g:game) : unit =
   let players = float_players g in
-  g.quota_support <- max 1.0 (g.quota *. players);
   g.share <- g.total /. players;
-  g.half_round_to_nearest <- g.round_to_nearest /. 2.
+  g.half_round_to_nearest <- g.round_to_nearest /. 2.;
+  g.surplus_precision <- min (0.0001 *. g.round_to_nearest) (0.0001 *. g.share);
+  let least_minimum = ref infinity in
+  List.iter (fun p -> least_minimum := min !least_minimum p.minimum) g.projects;
+  (* Try to get contributions at support one closer to share when share is small *)
+  g.quota_support <- max (max 1.0 (!least_minimum /. g.share)) (g.quota *. players)
+
 
 let support (g:game) (flat_before:currency) (spent_before:currency) (flat_here:currency) : support =
   let spend_limit = g.share -. spent_before in
@@ -161,11 +175,7 @@ let add_support_for_ballot_item (g:game) (b:ballot_item) (weight:float) : unit =
 	  if f.pamount > p.eliminated || f.pamount > b.actual_amount then ()
 	  else if f.pamount <= b.bprior then loop fs
 	  else begin
-	    f.psupport <- f.psupport +. weight *. b.bsupport;
-	    let f_support = max g.quota_support f.plast_support in
-	    f.pvote <- f.pvote +. weight *. b.bsupport *.
-	      f.psize /. f_support;
-	    loop fs
+	    f.psupport <- f.psupport +. weight *. b.bsupport
 	  end
     end
   in
@@ -245,12 +255,26 @@ let renew_project_supports (p:project) : unit =
     f.pvote <- 0.
   end p.fundings
 
+let finalize_projects (g:game) : unit =
+  List.iter begin fun p ->
+    List.iter begin fun f ->
+      let f_support = max g.quota_support f.plast_support in
+      f.pvote <- f.psize *. f.psupport /. f_support;
+      if f.psupport >= g.quota_support 
+	&& f.plast_support < g.quota_support then begin
+	g.results <- { rprojectid = p.projectid; ramount = f.pamount; rwinner = true } ::
+	  g.results
+      end
+    end p.fundings
+  end g.projects
+	
 (**********************************************************************
  * Perform one iteration over all ballots
  **********************************************************************)
 let one_iteration (g:game) : unit =
   List.iter renew_project_supports g.projects;
-  List.iter (adjust_ballot g) g.ballots
+  List.iter (adjust_ballot g) g.ballots;
+  finalize_projects g
 
 
 (**********************************************************************
@@ -263,7 +287,9 @@ let eliminate (g:game) (p:project) (f:funding_level) (new_amount:currency) : uni
   print_float t;
   print_endline " seconds";
   flush stdout;
-*)  
+*)
+  g.results <- { rprojectid = p.projectid; ramount = f.pamount; rwinner = false } ::
+    g.results;
   p.eliminated <- f.pamount;
   if f.pamount <= p.minimum then p.fundings <- [] else begin
     let new_amount = min new_amount (f.pamount -. g.round_to_nearest) in
@@ -306,7 +332,7 @@ let surplus_or_change ?(change:bool=false) ?(limit:currency = infinity) (g:game)
 let surplus (g:game) : currency = surplus_or_change g
 
 let change_in_projects (g:game) : bool =
-  surplus_or_change g ~change:true ~limit:g.half_round_to_nearest >= g.half_round_to_nearest
+  surplus_or_change g ~change:true ~limit:g.surplus_precision >= g.surplus_precision
 
 (* None if exclusion made; Some change otherwise *)
 (* Need to find lowest, next lowest, surplus *)
@@ -457,7 +483,12 @@ let rec play (g:game) : unit =
     begin match short_cut_exclusion_search g with
       | None -> true
       | Some (_,[]) -> false
-      | Some (surplus,_) when surplus >= g.round_to_nearest /. 10. -> true
+(*
+      | Some (surplus,[(p,f,dist)]) 
+	  when dist -. surplus > min g.half_round_to_nearest (0.1 *. f.pamount) -> 
+	  eliminate g p f (f.pamount -. g.round_to_nearest); true
+*)
+      | Some (surplus,_) when surplus >= g.surplus_precision -> true
       | Some (_, (p,f,_)::_) ->
 	  eliminate g p f (f.pamount -. g.round_to_nearest); true
     end
@@ -477,4 +508,16 @@ and cleanup (g:game) : unit =
   if total_winners g > g.total then begin
     assert (eliminate_worst_funding_level ~even_if_close:true g);
     play g
-  end else eliminate_zero_support_projects g
+  end else begin 
+    eliminate_zero_support_projects g;
+    (* anything left is a default winner *)
+    List.iter begin fun p ->
+      let len = List.length p.fundings in
+      if len > 0 then begin
+	let f = List.nth p.fundings (len - 1) in
+	if f.psupport < g.quota_support then
+	  g.results <- { rprojectid = p.projectid; ramount = f.pamount; rwinner = true } ::
+	    g.results
+      end
+    end g.projects
+  end

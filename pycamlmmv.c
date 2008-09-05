@@ -78,7 +78,6 @@ PyList_of_ml_list (value v, PyObject* (*conv)(value))
   CAMLreturnT(PyObject*,res);
 }
 
-
 PyObject* 
 PyFundingLevel_of_ml_funding_level(value v)
 {
@@ -286,13 +285,38 @@ PyBallot_gets_ml_ballot(PyObject* p, value v)
 }
 
 value
+ml_result_item_of_PyTriple(PyObject* p)
+{
+  CAMLparam0();
+  CAMLlocal1(res);
+  PyObject* tmp;
+  res = caml_alloc(3,0);
+  tmp = PyTuple_GetItem(p,0);
+  Store_field(res,0,Val_int(PyInt_AsLong(tmp)));
+  tmp = PyTuple_GetItem(p,1);
+  Store_field(res,1,caml_copy_double(PyFloat_AsDouble(tmp)));
+  tmp = PyTuple_GetItem(p,2);
+  Store_field(res,2,Val_bool(tmp == Py_True));
+  CAMLreturn(res);
+}
+
+PyObject*
+PyTriple_of_ml_result_item(value v)
+{
+  return Py_BuildValue("(lfO)",
+		       Int_val(Field(v,0)),
+		       Double_val(Field(v,1)),
+		       Bool_val(Field(v,2)) ? Py_True : Py_False);
+}
+
+value
 ml_game_of_PyElection(PyObject* p)
 {
   CAMLparam0();
   CAMLlocal1(res);
   PyObject* tmp;
   PyObject* values;
-  res = caml_alloc(9,0);
+  res = caml_alloc(11,0);
   tmp = PyObject_GetAttrString(p,"totalResources");
   Store_field(res,0,caml_copy_double(PyFloat_AsDouble(tmp)));
   Py_DECREF(tmp);
@@ -318,6 +342,14 @@ ml_game_of_PyElection(PyObject* p)
   Store_field(res,6,caml_copy_double(0.0));
   Store_field(res,7,caml_copy_double(0.0));
   Store_field(res,8,caml_copy_double(0.0));
+  Store_field(res,9,caml_copy_double(0.0));
+
+  tmp = PyObject_GetAttrString(p,"results");
+  values = PyObject_GetAttrString(tmp,"list");
+  Store_field(res,10,ml_list_of_PyList(values,ml_result_item_of_PyTriple));
+  Py_DECREF(values);
+  Py_DECREF(tmp);
+
   CAMLreturn(res);
 }
 
@@ -346,6 +378,10 @@ PyElection_gets_ml_game(PyObject* p, value v)
     mlitems = Field(mlitems,1);
   }
   Py_DECREF(items);
+  Py_DECREF(tmp);
+
+  tmp = PyObject_GetAttrString(p,"results");
+  PyObject_SetAttrString(tmp,"list",PyList_of_ml_list(Field(v,10),PyTriple_of_ml_result_item));
   Py_DECREF(tmp);
 }
 
@@ -376,6 +412,8 @@ pycamlmmv_run_election(PyObject *self, PyObject *args)
 static PyObject*
 pycamlmmv_send_election(PyObject *self, PyObject *args)
 {
+  CAMLparam0();
+  CAMLlocal1(g);
   static value * closure_f = NULL;
   PyObject* arg;
   if(!PyArg_ParseTuple(args, "O", &arg))
@@ -386,10 +424,11 @@ pycamlmmv_send_election(PyObject *self, PyObject *args)
     closure_f = caml_named_value("send_election");
   }
 
-  caml_callback(*closure_f, ml_game_of_PyElection(arg));
+  g = ml_game_of_PyElection(arg);
+  caml_callback(*closure_f, g);
 
   Py_INCREF(Py_None);
-  return Py_None;
+  CAMLreturnT(PyObject*,Py_None);
 }
 
 static PyMethodDef PycamlmmvMethods[] = {
