@@ -171,6 +171,7 @@ class Election:
     quota (float)   - number of votes a project needs to get funded
     roundToNearest (float)  - smallest change in resources we care about
     results (Results instance)   - a results instance of outcome of current election
+    state (int)  - current state of the election
     """
     
     def __init__(self, bltp=None):
@@ -182,6 +183,7 @@ class Election:
         self.quota = 0.0
         self.roundToNearest = 0.0
         self.results = Results(self,[])
+	self.state = 0
         if bltp is not None:
             self.import_bltp(bltp)
     
@@ -196,6 +198,7 @@ class Election:
     
     def import_bltp(self, filename):
         self.results.list = []
+	self.state = 0
         bltp.import_bltp(self, filename)
         for b in self.ballots.values():
             b.set_priors()
@@ -205,7 +208,18 @@ class Election:
     
     def step_election(self):
         # run one election step
-        pass
+        pycamlmmv.step_election(self)
+
+    def print_state(self):
+	if self.state == 0: return "Initial"
+	if self.state == 1: return "FoundWinner"
+	if self.state == 2: return "FoundLoser"
+	if self.state == 3: return "EliminatedLosers"
+	if self.state == 4: return "AtCleanup"
+	if self.state == 5: return "EliminatedNearWinner"
+	if self.state == 6: return "AllowedNearWinners"
+	if self.state == 7: return "Done"
+	return "Unknown" 
     
     def run_election(self):
         self.results.list = []

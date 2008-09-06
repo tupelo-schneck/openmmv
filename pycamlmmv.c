@@ -316,7 +316,7 @@ ml_game_of_PyElection(PyObject* p)
   CAMLlocal1(res);
   PyObject* tmp;
   PyObject* values;
-  res = caml_alloc(11,0);
+  res = caml_alloc(12,0);
   tmp = PyObject_GetAttrString(p,"totalResources");
   Store_field(res,0,caml_copy_double(PyFloat_AsDouble(tmp)));
   Py_DECREF(tmp);
@@ -348,6 +348,10 @@ ml_game_of_PyElection(PyObject* p)
   values = PyObject_GetAttrString(tmp,"list");
   Store_field(res,10,ml_list_of_PyList(values,ml_result_item_of_PyTriple));
   Py_DECREF(values);
+  Py_DECREF(tmp);
+
+  tmp = PyObject_GetAttrString(p,"state");
+  Store_field(res,11,Val_int(PyInt_AsLong(tmp)));
   Py_DECREF(tmp);
 
   CAMLreturn(res);
@@ -383,6 +387,10 @@ PyElection_gets_ml_game(PyObject* p, value v)
   tmp = PyObject_GetAttrString(p,"results");
   PyObject_SetAttrString(tmp,"list",PyList_of_ml_list(Field(v,10),PyTriple_of_ml_result_item));
   Py_DECREF(tmp);
+
+  tmp = PyInt_FromLong(Int_val(Field(v,11)));
+  PyObject_SetAttrString(p,"state",tmp);
+  Py_DECREF(tmp);
 }
 
 
@@ -399,6 +407,29 @@ pycamlmmv_run_election(PyObject *self, PyObject *args)
   if (closure_f == NULL) {
     /* First time around, look up by name */
     closure_f = caml_named_value("run_election");
+  }
+
+  g = ml_game_of_PyElection(arg);
+  caml_callback(*closure_f, g);
+  PyElection_gets_ml_game(arg, g);
+
+  Py_INCREF(arg);
+  CAMLreturnT(PyObject*,arg);
+}
+
+static PyObject*
+pycamlmmv_step_election(PyObject *self, PyObject *args)
+{
+  CAMLparam0();
+  CAMLlocal1(g);
+  static value * closure_f = NULL;
+  PyObject* arg;
+  if(!PyArg_ParseTuple(args, "O", &arg))
+    return NULL;
+  
+  if (closure_f == NULL) {
+    /* First time around, look up by name */
+    closure_f = caml_named_value("step_election");
   }
 
   g = ml_game_of_PyElection(arg);
@@ -434,6 +465,7 @@ pycamlmmv_send_election(PyObject *self, PyObject *args)
 static PyMethodDef PycamlmmvMethods[] = {
   {"register_class", pycamlmmv_register_class, METH_VARARGS, ""},
   {"run_election", pycamlmmv_run_election, METH_VARARGS, ""},
+  {"step_election", pycamlmmv_step_election, METH_VARARGS, ""},
   {"send_election", pycamlmmv_send_election, METH_VARARGS, ""},
   {NULL, NULL, 0, NULL}
 };
