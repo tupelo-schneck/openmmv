@@ -1,5 +1,7 @@
 (* TODO: what to do with non-transferable? *)
 
+let allow_multiple_eliminations = true
+
 let epsilon = 0.000000001
 
 let sign_of_float f =
@@ -397,7 +399,12 @@ let elimination_search ?(even_if_close:bool=false) (g:game) :
     sign_of_float (if dist1 = dist2 then elim2 -. elim1 else dist2 -. dist1)
   in
   List.fold_left begin fun lowest p ->
-    List.merge cmp (consider_funding_levels p p.fundings 0. 0.) lowest
+    let lowest = List.merge cmp (consider_funding_levels p p.fundings 0. 0.) lowest in
+    if allow_multiple_eliminations then lowest else
+    begin match lowest with
+      | a::b::_::_ -> [a;b]
+      | _ -> lowest
+    end
   end [] g.projects
 
 (* returns whether to continue iterations *)
@@ -439,8 +446,11 @@ let perform_elimination ?(even_if_close:bool=false) ?(really:bool=true) (g:game)
 	      | (_,_,dist',_) :: _ -> dist'
 	    end
 	  in
-	  if new_dist <= dist' then consider_elims es (elim_accum +. elim)
-	  else begin
+	  if new_dist <= dist' then begin 
+	    if allow_multiple_eliminations
+	    then consider_elims es (elim_accum +. elim)
+	    else break_tie ()
+	  end else begin
 	    if really then begin
 	      do_full_elims_before p eliminables;
 	      let new_amount = f.pamount -. (dist -. surplus -. elim_accum -. dist') in
