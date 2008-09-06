@@ -471,23 +471,12 @@ let play' (g:game) : unit =
   while eliminate_worst_funding_level g do many_iterations g done
 
 let rec play (g:game) : unit =
-(*  let t = Util.process_time () in
-  print_string "Start at ";
-  print_float t;
-  print_endline " seconds";
-  flush stdout;
-*)
   initialize_game g;
   one_iteration g;
   while
     begin match short_cut_exclusion_search g with
       | None -> true
       | Some (_,[]) -> false
-(*
-      | Some (surplus,[(p,f,dist)]) 
-	  when dist -. surplus > min g.half_round_to_nearest (0.1 *. f.pamount) -> 
-	  eliminate g p f (f.pamount -. g.round_to_nearest); true
-*)
       | Some (surplus,_) when surplus >= g.surplus_precision -> true
       | Some (_, (p,f,_)::_) ->
 	  eliminate g p f (f.pamount -. g.round_to_nearest); true
@@ -496,13 +485,6 @@ let rec play (g:game) : unit =
     one_iteration g
   done;
   cleanup g
-(*  ;
-  let t = Util.process_time () in
-  print_string "Finished game at "; 
-  print_float t;
-  print_endline " seconds";
-  flush stdout
-*)
  
 and cleanup (g:game) : unit =
   if total_winners g > g.total then begin

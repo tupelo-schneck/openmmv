@@ -46,7 +46,6 @@ MLFLAGS = -I obj
 MLLINKFLAGS = -cclib -L$(PYTHONLIBDIR) -cclib -lpython2.5
 CFLAGS = -Wall -I $(CAMLDIR) -I $(PYTHONINCDIR)
 
-vpath mmv% bin
 vpath %.o obj
 vpath %.cmi obj
 vpath %.cmo obj
@@ -70,9 +69,12 @@ pycamlmmv_module: pycamlmmv.$(SOEXT)
 pycamlmmv.$(SOEXT): $(CMODULES:=_c.o) camlcode.o
 	$(SOLINK) -o $@ $(^F:%.o=obj/%.o) $(SOLINKLIBS)
 
-mmv: $(CMODULES:=_c.o) pycamltop_c.o $(MLMODULES:=.cmo) pycamltop.cmo 
+bin/mmv: $(CMODULES:=_c.o) pycamltop_c.o $(MLMODULES:=.cmo) pycamltop.cmo 
 	mkdir -p bin
-	$(OCAMLMKTOP) $(MLFLAGS) $(MLLINKFLAGS) -o bin/$@ $(^F:%.o=obj/%.o)
+	$(OCAMLMKTOP) $(MLFLAGS) $(MLLINKFLAGS) -o $@ $(^F:%.o=obj/%.o)
+
+mmv: bin/mmv
+	touch mmv
 
 obj/DEPEND: $(MLMODULES:=.ml) pycamltop.ml
 	mkdir -p obj
