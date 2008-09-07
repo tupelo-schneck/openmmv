@@ -410,12 +410,13 @@ let elimination_search ?(even_if_close:bool=false) (g:game) :
 (* returns whether to continue iterations *)
 let perform_elimination ?(even_if_close:bool=false) ?(really:bool=true) (g:game) : bool =
   let eliminables = elimination_search ~even_if_close g in
+  if eliminables = [] then false else
   let surplus = surplus g in
   let break_tie () =
     (* misnomer, doesn't really break the tie, it just picks one *)
     if surplus > g.surplus_precision then really else
     begin match eliminables with
-      | [] -> false
+      | [] -> assert false
       | (p,f,_,_) :: _ ->
 	  if really then eliminate g p f (f.pamount -. g.round_to_nearest);
 	  true

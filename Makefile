@@ -7,6 +7,8 @@ clean:
 	rm -rf bin obj
 	rm -f a.out *.pyc *.o *.so *.dll
 	rm -rf build
+test: pycamlmmv_module
+	./tests.py
 
 CC = gcc
 OCAMLC = ocamlc
