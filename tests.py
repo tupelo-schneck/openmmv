@@ -5,8 +5,9 @@ import openstv.ballots as ballots
 import openstv.STV as stv
 import elections
 
-class MeekSTVNoDefaultWinners(stv.MeekSTV):
+class WarrenSTVNoDefaultWinners(stv.WarrenSTV):
     """
+    Changes electionOver to match MMV.
     """
     def electionOver(self):
         "Election is over when we know all the winners."
@@ -69,7 +70,7 @@ class Test:
     def runSTV(self, file):
         b = ballots.Ballots()
         b.load(file)
-        e = MeekSTVNoDefaultWinners(b, threshName=("Hare", "Static", "Fractional"))
+        e = WarrenSTVNoDefaultWinners(b, threshName=("Hare", "Static", "Fractional"))
         e.runElection()
         winS = "STV election winners: "
         for w in e.winners:

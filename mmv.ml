@@ -506,6 +506,7 @@ let rec play (g:game) : unit =
   cleanup g
  
 and cleanup (g:game) : unit =
+  (* TODO: clean *this* up *)
   if total_winners g > g.total then begin
     assert (perform_elimination ~even_if_close:true g);
     play g

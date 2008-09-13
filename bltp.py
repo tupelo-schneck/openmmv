@@ -263,7 +263,8 @@ def import_bltp(e,filename):
         if ['0'] == strs: break
         i = i + 1
 
-        if '0' != strs[-1]: raise SyntaxError, "expecting 0 at end of ballot"
+        if '0' != strs[-1]: strs.append('0')
+           #raise SyntaxError, "expecting 0 at end of ballot"
         if len(strs) < 2: raise SyntaxError, "badly formed ballot"
         if is_weight(strs[0]):
             name = ''
