@@ -1,5 +1,8 @@
 (* TODO: what to do with non-transferable? *)
 
+(* Meek only implemented for no utility function *)
+let meek = false
+
 let allow_multiple_eliminations = true
 
 let epsilon = 0.000000001
@@ -122,7 +125,10 @@ let support (g:game) (flat_before:currency) (spent_before:currency) (flat_here:c
   if spend_limit <= epsilon then 0. else
     begin match g.utility with
       | None -> 
-	  if flat_here > spend_limit then spend_limit /. flat_here else 1.0
+	  if meek then begin
+	    if flat_here > g.share then spend_limit /. flat_here else 
+	      spend_limit /. g.share
+	  end else if flat_here > spend_limit then spend_limit /. flat_here else 1.0
       | Some f ->
 	  let support = 
 	    f (flat_before /. g.share) (spent_before /. g.share) (flat_here /. g.share)
