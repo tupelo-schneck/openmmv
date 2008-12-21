@@ -43,7 +43,7 @@ class WarrenSTVNoDefaultWinners(stv.WarrenSTV):
                 
         # Not done yet.
         return (False, "")
-
+ 
 
 
 def print_timing(func):
@@ -74,7 +74,7 @@ class Test:
         e.runElection()
         winS = "STV election winners: "
         for w in e.winners:
-            winS += "%s " % b.names[w]
+            winS += "%s " % e.b.names[w]
         return winS
 
     @print_timing
@@ -97,7 +97,7 @@ class Test:
         self.times = {}
         cur = 0
         for file in files:
-            if cur < self.max and file[-4:] == ".blt":
+            if cur < self.max and file[-4:].lower() == ".blt":
                 print "Processing file: %s..." % file
                 msg = ""
                 s, sdelta =  self.runSTV(self.path + file)
@@ -121,5 +121,5 @@ class Test:
             print "%s\t\t%4.3f\t\t%4.3f\t\t%4.3f" % (t, s, m, s-m)
 
 if __name__ == "__main__":
-    t = Test(max=100,randomize=False)
+    t = Test(max=float('inf'),randomize=False)
     t.runTests()

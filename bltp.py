@@ -230,6 +230,25 @@ def import_bltp(e,filename):
         strs = savvy_split(line)
     if len(strs)>1: raise SyntaxError, "badly formed title"
     e.name = unquote_if_needed(strs[0])
+
+    strs = []
+    while strs == []:
+        line = f.readline()
+        if line == '': break
+        strs = savvy_split(line)
+    if line != '':
+        if len(strs)>1: raise SyntaxError, "badly formed source"
+        e.source = unquote_if_needed(strs[0])
+
+    strs = []
+    while strs == []:
+        line = f.readline()
+        if line == '': break
+        strs = savvy_split(line)
+    if line != '':
+        if len(strs)>1: raise SyntaxError, "badly formed comment"
+        e.comment = unquote_if_needed(strs[0])
+
     while line != '':
         line = f.readline()
         if savvy_split(line) != []: raise SyntaxError, "garbage after title"
@@ -256,6 +275,7 @@ def import_bltp(e,filename):
                     break
             else:
                 raise SyntaxError, "couldn't find project named " + name
+        e.projects[project].init_eliminated = 0
         e.projects[project].eliminated = 0
         
     i = 0

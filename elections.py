@@ -37,6 +37,7 @@ class Project:
                               eliminated.  Starts at infinity, drops as election is run
     fundings (list)         - A list of FundingLevel objects for this project.
                                Generally generated as election is run
+    init_eliminated (float) - Initial elimination (e.g. 0 for project withdrawal)
     """
     def __init__(self, id, name, min, max, cat=0, elim=float("inf"), fund=[]):
         self.id = int(id)
@@ -45,6 +46,7 @@ class Project:
         self.maximumBudget = float(max)
         self.category = int(cat)
         self.eliminated = float(elim)
+        self.init_eliminated = float(elim)
         self.fundings = fund
     
     def __str__(self):
@@ -164,6 +166,8 @@ class Election:
     """
     An election, including functions to run said election.  Variables include:
     name (str)         - name for this election
+    source (str)       - source information
+    comment (str)      - comment
     ballots (dict)     - a dict of Ballot instances, keyed by id
     projects (dict)    - same as above, for projects
     categories (dict)  - same as above, for categories
@@ -176,6 +180,8 @@ class Election:
     
     def __init__(self, bltp=None):
         self.name = ""
+        self.source = ""
+        self.comment = ""
         self.ballots = {}    # {id: Ballot instance}
         self.projects = {}   # {id: Project instance}
         self.categories = {} # {id: Cateory instance}
@@ -189,6 +195,8 @@ class Election:
     
     def reset(self):
         self.name = ""
+        self.source = ""
+        self.comment = ""
         self.ballots = {}
         self.projects = {}
         self.categories = {}
@@ -224,7 +232,7 @@ class Election:
     def run_election(self):
         self.results.list = []
         for p in self.projects.values():
-            p.eliminated = float("inf")
+            p.eliminated = p.init_eliminated
             p.fundings = []
         pycamlmmv.run_election(self)
     
