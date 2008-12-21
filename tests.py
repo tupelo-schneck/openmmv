@@ -4,6 +4,7 @@ import os, random, time, timeit
 import openstv.ballots as ballots
 import openstv.STV as stv
 import elections
+import sys
 
 class WarrenSTVNoDefaultWinners(stv.WarrenSTV):
     """
@@ -122,4 +123,11 @@ class Test:
 
 if __name__ == "__main__":
     t = Test(max=float('inf'),randomize=False)
+    if len(sys.argv) > 1:
+        path = sys.argv[1]
+        if path[-4:].lower() != ".blt":
+            t.path = path
+        else:
+            t.path = ''
+            t.file = path
     t.runTests()

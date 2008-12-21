@@ -249,9 +249,10 @@ def import_bltp(e,filename):
         if len(strs)>1: raise SyntaxError, "badly formed comment"
         e.comment = unquote_if_needed(strs[0])
 
-    while line != '':
-        line = f.readline()
-        if savvy_split(line) != []: raise SyntaxError, "garbage after title"
+#    while line != '':
+#        line = f.readline()
+#        if savvy_split(line) != []: raise SyntaxError, "garbage after title"
+# we'll ignore extra garbade...
     
     f.seek(0)
     strs = []
