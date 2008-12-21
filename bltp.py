@@ -132,6 +132,39 @@ def is_weight(s):
         if not ch.isdigit() and not ch == '.': return False
     return True
 
+def get_project_from_strs(i,strs,e):
+  if strs[0][0] == '"':
+      colon = find_end_quote(strs[0],1) + 1
+      if colon == len(strs[0]): colon = -1
+  else:
+      colon = strs[0].find(':')
+  if colon == -1:
+      cat = 0
+      name = unquote_if_needed(strs[0])
+  else:
+      name = unquote_if_needed(strs[0][colon+1:])
+      catName = strs[0][:colon]
+      if catName.isdigit():
+          cat = int(catName)
+      else:
+          catName = unquote_if_needed(catName)
+          for cat in e.categories.values():
+              if catName == cat.name:
+                  cat = cat.id
+                  break
+          else:
+              raise SyntaxError, "couldn't find category: " + catName
+  if len(strs) >= 2:
+      minB = float(strs[1])
+  else:
+      minB = 1.0
+  if len(strs) >= 3:
+      maxB = float(strs[2])
+  else:
+      maxB = minB
+  return elections.Project(i,name,minB,maxB,cat)
+
+
 def import_bltp(e,filename):
   e.reset()
   f = open(filename,'r')
@@ -192,36 +225,24 @@ def import_bltp(e,filename):
             line = f.readline()
             if line == '': raise SyntaxError, "expecting another project"
             strs = savvy_split(line)
-        if strs[0][0] == '"':
-            colon = find_end_quote(strs[0],1) + 1
-            if colon == len(strs[0]): colon = -1
+        many_projects = len(strs) >= 4
+        if not many_projects:
+            try:
+                if len(strs) >= 2:
+                    float(strs[1])
+                if len(strs) >= 3:
+                    float(strs[2])
+            except ValueError:
+                many_projects = True
+        if many_projects:
+            for s in strs:
+                e.projects[i] = get_project_from_strs(i,[s],e)
+                i = i + 1
+            i = i - 1
         else:
-            colon = strs[0].find(':')
-        if colon == -1:
-            cat = 0
-            name = unquote_if_needed(strs[0])
-        else:
-            name = unquote_if_needed(strs[0][colon+1:])
-            catName = strs[0][:colon]
-            if catName.isdigit():
-                cat = int(catName)
-            else:
-                catName = unquote_if_needed(catName)
-                for cat in e.categories.values():
-                    if catName == cat.name:
-                        cat = cat.id
-                        break
-                else:
-                    raise SyntaxError, "couldn't find category: " + catName
-        if len(strs) >= 2:
-            minB = float(strs[1])
-        else:
-            minB = 1.0
-        if len(strs) >= 3:
-            maxB = float(strs[2])
-        else:
-            maxB = minB
-        e.projects[i] = elections.Project(i,name,minB,maxB,cat)
+            e.projects[i] = get_project_from_strs(i,strs,e)
+    if i > numprojects:
+        raise SyntaxError, "too many projects"
 
     strs = []
     while strs == []:
