@@ -187,11 +187,27 @@ class Election:
         self.categories = {} # {id: Cateory instance}
         self.totalResources = 0.0
         self.quota = 0.0
-        self.roundToNearest = 0.0
+        self.roundToNearest = 1.0
         self.results = Results(self,[])
 	self.state = 0
         if bltp is not None:
             self.import_bltp(bltp)
+
+    def from_ballots(self,ballots):
+        self.name = ballots.title
+        self.categories[0] = Category(0,"None")
+        self.totalResources = ballots.nSeats
+        i = 0
+        for name in ballots.names:
+            self.projects[i] = Project(i,name,1,1)
+            i += 1
+        for i in ballots.withdrawn:
+            self.projects[i].eliminated = 0
+            self.projects[i].init_eliminated = 0
+        for i, b in enumerate(ballots.packed):
+            self.ballots[i] = Ballot(i,"",ballots.weight[i])
+            for j, bi in enumerate(b):
+                self.ballots[i].ballotItems[j] = [BallotItem(bi,1)]
     
     def reset(self):
         self.name = ""

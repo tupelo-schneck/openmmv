@@ -316,7 +316,7 @@ ml_game_of_PyElection(PyObject* p)
   CAMLlocal1(res);
   PyObject* tmp;
   PyObject* values;
-  res = caml_alloc(12,0);
+  res = caml_alloc(13,0);
   tmp = PyObject_GetAttrString(p,"totalResources");
   Store_field(res,0,caml_copy_double(PyFloat_AsDouble(tmp)));
   Py_DECREF(tmp);
@@ -353,6 +353,8 @@ ml_game_of_PyElection(PyObject* p)
   tmp = PyObject_GetAttrString(p,"state");
   Store_field(res,11,Val_int(PyInt_AsLong(tmp)));
   Py_DECREF(tmp);
+
+  Store_field(res,12,Val_unit);
 
   CAMLreturn(res);
 }

@@ -67,6 +67,22 @@ type ballot = {
   mutable priorities : ballot_priority list;
 }
 
+(**********************************************************************)
+
+type ballot_tree_item = {
+  mutable bti_weight : float;
+  mutable bti_priority : ballot_priority;
+  mutable bti_conts : ballot_tree
+}
+
+(* idea: list of ballots to be added before traversal *)
+and ballot_tree = {
+  mutable bt_items : ballot_tree_item list;
+  mutable bt_ballots : ballot list;
+}
+
+(**********************************************************************)
+
 type result_item = {
   rprojectid : int;
   ramount : currency;
@@ -98,6 +114,8 @@ type game = {
   
   mutable results : result_item list;
   mutable state : game_state;
+
+  mutable tree : ballot_tree;
 }
 
 (* really more of a floor *)
@@ -117,7 +135,11 @@ let initialize_game (g:game) : unit =
   let least_minimum = ref infinity in
   List.iter (fun p -> least_minimum := min !least_minimum p.minimum) g.projects;
   (* Try to get contributions at support one closer to share when share is small *)
-  g.quota_support <- max (max 1.0 (!least_minimum /. g.share)) (g.quota *. players)
+  g.quota_support <- max (max 1.0 (!least_minimum /. g.share)) (g.quota *. players);
+  g.tree <- {
+    bt_items = [];
+    bt_ballots = g.ballots
+  }
 
 
 let support (g:game) (flat_before:currency) (spent_before:currency) (flat_here:currency) : support =
@@ -272,6 +294,51 @@ let adjust_ballot (g:game) (b:ballot) : unit =
   in
   loop_priorities b.priorities 0. 0.
 
+let rec adjust_ballot_tree_item (g:game) (flat_sofar:currency) (spent_sofar:currency) (bti:ballot_tree_item) : unit =
+  let bp = bti.bti_priority in
+  let flat_here, spent_here = adjust_ballot_priority g bp flat_sofar spent_sofar bti.bti_weight in
+  adjust_ballot_tree g (flat_sofar +. flat_here) (spent_sofar +. spent_here) bti.bti_conts
+
+and adjust_ballot_tree (g:game) (flat_sofar:currency) (spent_sofar:currency) (bt:ballot_tree) : unit =
+  if g.share -. spent_sofar <= epsilon then () else
+  (* tree-ify all ballots *)
+  let rec loop_ballots bs =
+    begin match bs with
+      | [] -> ()
+      | b::bs ->
+	  begin match b.priorities with 
+	    | bp::bps ->
+		flush stdout;
+		let item = 
+		  begin try 
+		    List.find (fun bti -> bti.bti_priority = bp) bt.bt_items 
+		  with
+		      Not_found ->
+			let item = {
+			  bti_weight = 0.;
+			  bti_priority = bp;
+			  bti_conts = {
+			    bt_items = [];
+			    bt_ballots = []
+			  }
+			}
+			in
+			bt.bt_items <- item :: bt.bt_items;
+			item
+		  end
+		in
+   		item.bti_weight <- item.bti_weight +. b.weight;
+		if bps!=[] then item.bti_conts.bt_ballots <- {b with priorities = bps} :: item.bti_conts.bt_ballots
+	    | [] -> ()
+	  end;
+	  loop_ballots bs
+      end
+  in
+  loop_ballots bt.bt_ballots;
+  bt.bt_ballots <- [];
+  List.iter (adjust_ballot_tree_item g flat_sofar spent_sofar) bt.bt_items
+;;
+
 let renew_project_supports (p:project) : unit =
   List.iter begin fun f -> 
     f.plast_support <- f.psupport;
@@ -298,7 +365,10 @@ let finalize_projects (g:game) : unit =
  **********************************************************************)
 let one_iteration (g:game) : unit =
   List.iter renew_project_supports g.projects;
-  List.iter (adjust_ballot g) g.ballots;
+  if false then
+    List.iter (adjust_ballot g) g.ballots
+  else  
+    adjust_ballot_tree g 0. 0. g.tree;
   finalize_projects g
 
 
@@ -503,8 +573,17 @@ let eliminate_zero_support_projects (g:game) : unit =
     end
   end g.projects
 
+let print_timing s =
+  print_string s;
+  print_string " ";
+  print_float (Util.process_time());
+  print_newline();
+  flush stdout
+
 let rec play (g:game) : unit =
+(*  print_timing "Before init";*)
   initialize_game g;
+(*   print_timing "After init"; *)
   one_iteration g;
   while perform_elimination g do
     one_iteration g

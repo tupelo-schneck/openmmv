@@ -10,6 +10,10 @@ class WarrenSTVNoDefaultWinners(stv.WarrenSTV):
     """
     Changes electionOver to match MMV.
     """
+#     def allocateRound(self):
+#         print "STV Round " + str(self.R) + " " + str(time.clock())
+#         stv.WarrenSTV.allocateRound(self)
+    
     def electionOver(self):
         "Election is over when we know all the winners."
         
@@ -68,9 +72,9 @@ class Test:
         self.randomize = randomize
     
     @print_timing
-    def runSTV(self, file):
-        b = ballots.Ballots()
-        b.load(file)
+    def runSTV(self, file, b):
+#        b = ballots.Ballots()
+#        b.load(file)
         e = WarrenSTVNoDefaultWinners(b, threshName=("Hare", "Static", "Fractional"))
         e.runElection()
         winS = "STV election winners: "
@@ -79,8 +83,9 @@ class Test:
         return winS
 
     @print_timing
-    def runMMV(self, file):
-        e = elections.Election(file)
+    def runMMV(self, file, b, e):
+#        e = elections.Election()#file)
+#        e.from_ballots(b)
         e.run_election()
         winM = "MMV election winners: "
         for item in e.results.winners():
@@ -101,8 +106,12 @@ class Test:
             if cur < self.max and file[-4:].lower() == ".blt":
                 print "Processing file: %s..." % file
                 msg = ""
-                s, sdelta =  self.runSTV(self.path + file)
-                m, mdelta =  self.runMMV(self.path + file)
+                b = ballots.Ballots()
+                b.load(self.path+file)
+                s, sdelta =  self.runSTV(self.path + file,b)
+                e = elections.Election()#file)
+                e.from_ballots(b)
+                m, mdelta =  self.runMMV(self.path + file,b,e)
                 msg += "======================================\n"
                 msg += "Election file: %s\n" % file
                 msg += "%s\n" % s
