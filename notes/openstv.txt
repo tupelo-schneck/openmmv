@@ -1,0 +1,253 @@
+Election:
+nSeats (int) from ballots
+title (string) from ballots
+date (string) from ballots BUG "data" for date
+debug (boolean) False
+strongTieBreakMEthod (string) "random", "request", "alpha", "index"
+b (Ballots)
+withdrawn (int list) from ballots
+namesPlusWithdrawn (string list) from ballots
+
+setOptions:
+prec (?) default None
+
+initialize:
+nRandom (int) 0 -- number of random choices made
+p (int) 10**prec -- scale factor
+(calls setFields, checkMinRequirements,Ballots.exciseCandidates)
+
+joinList:
+returns string listing candidates
+
+displayValue:
+
+setFields:
+fw (int) -- number of digits/point in largest num
+nfmt (string) -- format string for decimal numbers
+
+checkMinRequirements:
+
+topChoice:
+findTiedCand:
+chooseNfromN: -- not static, uses breaakStrongTie && joinList
+breakStrongTie:
+(static utilities, or at least only referring to names&& stronTieBreakMethod)
+
+
+
+
+Iterative:
+ThreshMethod = True
+threshName...
+weakTieBreakMethod = "backward"/"forward"/"random"
+
+initialize:
+  msg = [] ---msg[round]
+  count = [] int list list -- count[round][cand]
+  exhausted = [] int list [round]
+  winnersEven = [] # surplus transferred
+  winnersOVer = [] # still have surplus
+  action[r] = []   ("surplus|eliminate", list int) list
+     # describes what happened to what candidates
+  wonAtRound = [None,None...] 1 slot for each cand
+  lostAtRound = [None,...]
+  losers = []
+  purgatory = [all cands] : list int
+  winners = []
+
+
+self.nRounds
+self.surplus[round]
+self.thresh[round]
+
+### results methods...
+
+breakWeakTie(Self,R,cList,mostfewest)
+
+newWinners:
+  move from purg to winnersOver & winners
+  set wonAtRound
+
+newLosers:
+  move from purg to losers and set lostAtRound
+
+
+
+
+
+STV:
+firstEliminationRound = True
+R = 0
+nRounds = 0
+votes : int list list --- indices of all votes for cand
+
+allocateRound: msg/count/exhausted/surplus/thread/action
+
+updateThresh
+updateSurplus
+updateWinners
+
+isSurplusToTransfer : (bool, desc: string)
+
+self.delayedTransfer
+
+chooseSurplusToTransfer: choose cand w/ greatest
+
+getLosers: sure losers
+
+chooseCandidatesToEliminate:
+  firstEliminationRound different? check self.batchElimination
+  even later, check batchElimination to see if eliminate
+     sure Losers or just one
+
+electionOver:  winners = seats OR winners + purgatory  <= seats
+
+updateStatus: all purg are made winners or (if 0 votes) losers
+
+initialVoteTally: allocate top choices into "votes"
+
+***runElection
+
+
+
+
+
+RecursiveSTV
+
+self.threshName=("Hare","Static","Fractional")
+self.prec=6
+self.f : int list list [R][cand]
+
+initializeTreeAndKeepValues
+tree={}
+add each ballot to tree
+self.f[0][c] = self.p
+
+addBallotToTree
+get topChoice of purg and winners
+tree[c] = {}
+tree[c]["n"] = 0
+tree[c]["bi"] = []
+tree[c]["n"] += weight
+addBallotToTree(tree[c], ballotIndex, ballot[i+1:])
+OR tree[c]["bi"].append(ballotIndex)
+
+updateTree:
+if c a loser, merge up
+if c a winner and has "bi", go to next level
+if c a winner and no "bi", recurse to lower levels
+
+updateCount:
+treeCount;
+update exhausted (by exclusion)
+updateThresh;
+for each in winners and purg, set surplus
+
+override: chooseCandidatesToEliminate
+
+copyKeepValues -- that's f
+
+updateKeepValues
+
+runElection
+
+
+
+
+
+
+
+
+MeekSTV:
+
+treeCount
+
+
+
+
+------------------------------------------------------------------------
+
+calls back:
+
+RecursiveSTV.__init__ -> STV.__init__ -> Iterative.__init__ -> Election.__init__
+RecursiveSTV.initialize -> STV.initialize -> Iterative.initialize -> Election.intialize
+RecursiveSTV.setOptions -> STV.setOptions
+RecursiveSTV.checkMinRequirements -> STV.checkMinRequirements
+RecursiveSTV.allocateRound -> STV.allocateRound
+class Election:
+  def __init__(self, b): # good
+  def setOptions(self, debug=None, # good
+  def initialize(self): # good --- but note Ballots.exciseCandidates
+  def joinList(self, list, convert="names"): # good, static (join list of cands into string)
+  def displayValue(self, value):# good, static mod prec
+  def setFields(self, fw=None): # good, static mod prec
+  def checkMinRequirements(self): # OVERRIDE but close
+  def topChoice(self, ballot, candidates): # ????? returns cand only
+  def findTiedCand(self, cList, mostfewest, values): # good-ish (cand only?) static
+  # def chooseNfromM(self, N, values, cList, what):
+  def breakStrongTie(self, tiedC): # good-ish, static mod strongTieBreakMethod
+class Iterative(Election):
+  def __init__(self, b): # good
+  def initialize(self): # ????, ignore winnersEven and winnersOver, check wonAtRound, lostAtRound, purgatory
+  def getMaxNumber(self): # ?????? may need override for more numbers
+  def generateTextRoundResults(self, round, width, nSubCol):
+  def generateTextResults(self, maxWidth=80, style="full", round=None): # OVERRIDE...
+  def generateHTMLResults(self, maxWidth=80):
+  def generateERSCSVResults(self, skipDate=False):
+  def breakWeakTie(self, R, cList, mostfewest, what=""): # ????? breaks only on count...
+  def newWinners(self, winners, status="over"): # ?????
+  def newLosers(self, losers): # ????
+class STV(Iterative):
+  def __init__(self, b): # good (empty)
+  def initialize(self): # good, except does useless self.firstEliminationRound and self.votes
+  def allocateRound(self): # ????? count
+  def updateThresh(self): # good; bugfix?  also supportObligation...?
+  # def updateSurplus(self):
+  def updateWinners(self): # ????? by cand
+  # def isSurplusToTransfer(self):
+  # def chooseSurplusToTransfer(self):
+  def getLosers(self, ppp = None): # OVERRIDE change maxNumLosers; also dist/elim distinct
+  # def chooseCandidatesToEliminate(self):
+  def electionOver(self): # OVERRIDE
+  def updateStatus(self): # OVERRIDE
+  # def initialVoteTally(self):
+  # def runElection(self):
+class RecursiveSTV(STV):
+  def __init__(self, b): # good (note default thresh)
+  def initialize(self): # good
+  def setOptions(self, debug=None, strongTieBreakMethod=None, prec=None, # good
+  def checkMinRequirements(self): # OVERRIDE (Meek precondition)
+  def allocateRound(self): # maybe override f
+  def initializeTreeAndKeepValues(self):
+  def addBallotToTree(self, tree, ballotIndex, ballot=""):
+  def updateTree(self, tree):
+  def updateCount(self):
+  def chooseCandidatesToEliminate(self):
+  def eliminateLosers(self, losers):
+  def copyKeepValues(self):
+  def updateKeepValues(self):
+  def runElection(self):
+class MeekSTV(RecursiveSTV):
+  def __init__(self, b):
+  def treeCount(self, tree, remainder):
+class WarrenSTV(RecursiveSTV):
+  def __init__(self, b):
+  def treeCount(self, tree, remainder):
+
+
+class RecursiveXSTV(RecursiveSTV):
+  def __init__(self, b):
+  def initialize(self):
+  def _eq_(self, a, b):
+  def _lt_(self, a, b):
+  def _gt_(self, a, b):
+  def _le_(self, a, b):
+  def displayValue(self, value):
+  def updateThresh(self):
+  def updateWinners(self):
+  def getLosers(self, ppp = None):
+  def findTiedCand(self, cList, mostfewest, function):
+class MeekXSTV(RecursiveXSTV, MeekSTV):
+  def __init__(self, b):
+class WarrenXSTV(RecursiveXSTV, WarrenSTV):
+  def __init__(self, b):

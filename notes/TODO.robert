@@ -1,0 +1,53 @@
+> The Results for Items
+> include each loser's highest votes, money and supporters, recorded when a
+> loser is eliminated.
+
+> Then you can play with giving money left in an exhausted ballot to its
+> winners.  Or simply give it to a special item (planner reserve, emergency
+> fund, next OTRA game, retirement fund...) that ranks just above all unranked
+> items.  Either would prevent a ballot's leftover money from transferring to
+> any item the voter didn't like enough to rank.
+
+other options for exhausted ballots
+
+
+OLD THOUGHTS
+
+Here's something else I've considered.  If a voter is giving extra
+support to  an item, and then discovers that the item is substantially
+over quota, maybe the voter should actually decrease his contribution.
+ If I don't know how many people are going to support something, I
+might be willing to give it a double chip, but if I find out that 10
+other people are supporting it, why should I want to give twice as
+much as them?  (Obviously I shouldn't be able to lower my contribution
+below 1, however!  Otherwise I'm relying on other people to fund what
+I want!)
+
+> The keep_value takes care of extra votes in situations where there
+> are, say, 7 supporters and a quota of 6.  But where it is possible to
+> have higher support than 1, you might have a quota of 6 and a project
+> with 5 who support it at 1 and 2 who support it at 2.  Those 2 end up
+> paying twice as much as the other 5.  Maybe however they shouldn't be
+> paying extra when their extra isn't needed to get the project funded.
+
+Hmmm, there are technical difficulties with this idea; if a voter
+pulls money away from a project, other voters have to put more in, and
+then they have less to give to other projects, which might impact the
+original voter in a way that causes nasty loops... probably best to
+table this idea.  And maybe if you were wiling to give double support
+to something, you should be willing to give that double support no
+matter how many other supporters show up!
+
+*****
+
+So, Utility Values are one of several ways to:
+1) Make ballots spread their money.
+2) Help the tally look ahead in the elimination sequence.
+3) Let a voter help a first choice more than a second, which is satisfying and partially protects top choices.
+1b) The definitions of "a quota" and "1 vote" can avoid making UVs spread votes too much.
+2b) Other checks might be enough to optimize the eliminations.
+
+protection (remove support from lower projects when a top one is threatened)
+suspended votes
+
+supermajority, condorcet
