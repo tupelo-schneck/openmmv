@@ -437,8 +437,7 @@ class ProjectElection(RecursiveSTV):
         self.count = self.totalCount
         res = RecursiveSTV.generateTextResults(self,maxWidth,style,round)
         self.count = savedcount
-        return "Note: these tables show how many resources each project needs to satisfy all\n" +\
-               "non-eliminated funding levels---NOT the total count for each project.\n" + res
+        return res
 
         
 
