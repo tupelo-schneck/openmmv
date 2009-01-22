@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import os, random, time, timeit
-import openstv.ballots as ballots
-import openstv.STV as stv
+import ballots as ballots
+import STV as stv
 import elections
 import sys
+import projectBallots
+import projectElection
 
 class WarrenSTVNoDefaultWinners(stv.WarrenSTV):
     """
@@ -73,9 +75,8 @@ class Test:
     
     @print_timing
     def runSTV(self, file, b):
-#        b = ballots.Ballots()
-#        b.load(file)
-        e = WarrenSTVNoDefaultWinners(b, threshName=("Hare", "Static", "Fractional"))
+        e = WarrenSTVNoDefaultWinners(b)
+        e.setOptions(threshName=("Hare", "Static", "Fractional"))
         e.runElection()
         winS = "STV election winners: "
         for w in e.winners:
@@ -84,13 +85,23 @@ class Test:
 
     @print_timing
     def runMMV(self, file, b, e):
-#        e = elections.Election()#file)
-#        e.from_ballots(b)
         e.run_election()
         winM = "MMV election winners: "
         for item in e.results.winners():
             winM += "%s " % e.projects[item[0]].name
         return winM
+
+    @print_timing
+    def runMMV2(self, file, b):
+        try:
+            e = projectElection.ProjectElection(b)
+            e.runElection()
+            winM2 = "MM2 election winners: "
+            for w in e.winners:
+                winM2 += "%s " % e.b.names[w]
+        except:
+            winM2 = "MM2 error!"
+        return winM2
 
     def runTests(self):
         # for each election, run with openmmv and openstv and print results
@@ -106,29 +117,35 @@ class Test:
             if cur < self.max and file[-4:].lower() == ".blt":
                 print "Processing file: %s..." % file
                 msg = ""
-                b = ballots.Ballots()
+                b = ballots.BltBallots()
                 b.load(self.path+file)
                 s, sdelta =  self.runSTV(self.path + file,b)
-                e = elections.Election()#file)
+                e = elections.Election()
                 e.from_ballots(b)
                 m, mdelta =  self.runMMV(self.path + file,b,e)
+                b = projectBallots.ProjectBallots()
+                b.load(self.path+file)
+                m2, m2delta = self.runMMV2(self.path + file,b)
                 msg += "======================================\n"
                 msg += "Election file: %s\n" % file
                 msg += "%s\n" % s
-                msg += "%s\n\n" % m
+                msg += "%s\n" % m
+                msg += "%s\n\n" % m2
                 #print msg
-                self.times[file] = (sdelta, mdelta)
+                self.times[file] = (sdelta, mdelta, m2delta)
                 if s[3:] != m[3:]:
+                    self.diff[file] = msg
+                elif s[3:] != m2[3:]:
                     self.diff[file] = msg
                 cur += 1
         print "Files with differing results:"
         for _, msg in sorted(self.diff.items()):
             print msg
-        print "\nTimings (in milliseconds):\nFilename\tSTV time\tMMV time\tSTV-MMV"
+        print "\nTimings (in milliseconds):\nFilename\tSTV time\tMMV time\tMMV2 time"
         print "========================================================"
         for t in sorted(self.times.keys()):
-            s, m = self.times[t]
-            print "%s\t\t%4.3f\t\t%4.3f\t\t%4.3f" % (t, s, m, s-m)
+            s, m, m2 = self.times[t]
+            print "%s\t\t%4.3f\t\t%4.3f\t\t%4.3f" % (t, s, m, m2)
 
 if __name__ == "__main__":
     t = Test(max=float('inf'),randomize=False)

@@ -2,7 +2,7 @@
 # Hash sign # marks a comment until end of line.
 # Blank lines or comment lines are ignored.
 #
-# <num_categories>:<num_projects> <total_resources> <quota_pct> <round_to_nearest>
+# <num_categories>:<num_projects> <total_resources>(<quota_pct>,<round_to_nearest>)
 # -<project_to_eliminate>
 # -<project_to_eliminate>
 # ...
@@ -13,8 +13,8 @@
 # <category_name>
 # <category_name>
 # ...
-# <category>:<project_name> <minimum> <maximum>
-# <category>:<project_name> <minimum> <maximum>
+# <category>:<project_name>(<minimum>,<maximum>)
+# <category>:<project_name>(<minimum>,<maximum>)
 # ...
 # <election_name>
 #
@@ -133,16 +133,18 @@ def is_weight(s):
     return True
 
 def get_project_from_strs(i,strs,e):
+  if len(strs)>1:
+      raise SyntaxError, "Problem with getting project"
   if strs[0][0] == '"':
       colon = find_end_quote(strs[0],1) + 1
-      if colon == len(strs[0]): colon = -1
+      if colon == len(strs[0]) or strs[0][colon] != ":": colon = -1
   else:
       colon = strs[0].find(':')
   if colon == -1:
       cat = 0
-      name = unquote_if_needed(strs[0])
+      rest = strs[0]
   else:
-      name = unquote_if_needed(strs[0][colon+1:])
+      rest = strs[0][colon+1:]
       catName = strs[0][:colon]
       if catName.isdigit():
           cat = int(catName)
@@ -154,14 +156,17 @@ def get_project_from_strs(i,strs,e):
                   break
           else:
               raise SyntaxError, "couldn't find category: " + catName
-  if len(strs) >= 2:
-      minB = float(strs[1])
-  else:
-      minB = 1.0
-  if len(strs) >= 3:
-      maxB = float(strs[2])
-  else:
+
+  strs = rest.split('(')
+  name = unquote_if_needed(strs[0])
+  minB = 1.0
+  if len(strs) > 1:
+      strs = strs[1].split(',')
+      if len(strs)==1: strs[0] = strs[0][:-1]
+      minB = float(strs[0])
       maxB = minB
+      if len(strs) > 1:
+          maxB = float(strs[2][:-1])
   return elections.Project(i,name,minB,maxB,cat)
 
 
@@ -185,18 +190,18 @@ def import_bltp(e,filename):
         numprojects = int(substrs[1])
     else:
         raise SyntaxError, "badly formed cats:projects count"
-    
-    e.totalResources = float(strs[1])
-    if len(strs) >= 3:
-        e.quota = float(strs[2])
-    else:
-        e.quota = 0.0
-    if len(strs) >= 4:
-        e.roundToNearest = float(strs[3])
-    else:
-        e.roundToNearest = 1.0
-    if len(strs) >= 5:
-        raise SyntaxError, "badly formed first line"        
+
+    strs = strs[1].split("(")
+    e.totalResources = float(strs[0])
+    e.quota = 0.0
+    e.roundToNearest = 1.0
+    if len(strs) > 1:
+        strs = strs[1].split(",")
+        if len(strs)==1: strs[0] = strs[0][:-1]
+        e.quota = float(strs[0])
+        if len(strs) > 1:
+            e.roundToNearest = float(strs[1][:-1])
+
     
     strs = []
     while ['0'] != strs:
@@ -226,14 +231,6 @@ def import_bltp(e,filename):
             if line == '': raise SyntaxError, "expecting another project"
             strs = savvy_split(line)
         many_projects = len(strs) >= 4
-        if not many_projects:
-            try:
-                if len(strs) >= 2:
-                    float(strs[1])
-                if len(strs) >= 3:
-                    float(strs[2])
-            except ValueError:
-                many_projects = True
         if many_projects:
             for s in strs:
                 e.projects[i] = get_project_from_strs(i,[s],e)
@@ -374,9 +371,10 @@ def export_bltp(e,filename):
             f.writelines([str(numcats),':'])
         f.writelines([str(len(e.projects)),' ',str_float(e.totalResources)])
         if e.quota > 0.0 or e.roundToNearest != 1.0:
-            f.writelines([' ',str_float(e.quota)])
-        if e.roundToNearest != 1.0:
-            f.writelines([' ',str_float(e.roundToNearest)])
+            f.writelines(['(',str_float(e.quota)])
+            if e.roundToNearest != 1.0:
+                f.writelines([',',str_float(e.roundToNearest)])
+            f.write(')')
         f.write('\n')
 
         projectKeys = sorted(e.projects.keys())
@@ -419,10 +417,11 @@ def export_bltp(e,filename):
             if p.category != 0:
                 f.writelines([str(new_id(p.category)),':'])
             f.write(quote(p.name))
-            if p.minimumBudget != 1.0:
-                f.writelines([' ',str_float(p.minimumBudget)])
-            if p.maximumBudget > p.minimumBudget:
-                f.writelines([' ',str_float(p.maximumBudget)])
+            if p.minimumBudget != 1.0 or p.maximumBudget > p.minimumBudget:
+                f.writelines(['(',str_float(p.minimumBudget)])
+                if p.maximumBudget > p.minimumBudget:
+                    f.writelines([',',str_float(p.maximumBudget)])
+                f.write(')')
             f.write('\n')
 
         f.writelines([quote(e.name),'\n'])
