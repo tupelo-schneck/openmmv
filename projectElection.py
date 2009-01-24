@@ -40,6 +40,7 @@ class ProjectElection(RecursiveSTV):
         self.eliminableResources = []
         self.resourcesWantedOfLeastNonLoser = None
         self.totalCount = []
+        self.maxKeep = []
 
 ###
 
@@ -57,9 +58,11 @@ class ProjectElection(RecursiveSTV):
         RecursiveSTV.allocateRound(self)
         self.count[self.R] = [0] * self.b.nProj
         self.totalCount.append([0] * self.b.nProj) # just used for printing results
+        self.maxKeep.append([0] * self.b.nProj)
         for c in range(self.b.nProj):
             self.count[self.R][c] = {}
             self.f[self.R][c] = {}
+            self.maxKeep[self.R][c] = {}
         if self.R == 0:
             self.winAmount = [[0] * self.b.nProj]
             self.eliminatedAbove = [[self.maximum[p] for p in range(self.b.nProj)]]
@@ -281,6 +284,8 @@ class ProjectElection(RecursiveSTV):
                 if amount > self.winAmount[self.R-1][c]:
                     break
                 oldf = self.f[self.R-1][c].get(amount,self.supportLimit)
+                if oldf > self.maxKeep[self.R][c].get(amount,self.p):
+                    oldf = self.maxKeep[self.R][c][amount]
                 f, r = divmod(oldf * (amount - prior),
                       self.count[self.R-1][c][amount])
                 if r > 0: f += 1
@@ -390,17 +395,30 @@ class ProjectElection(RecursiveSTV):
                     contribTot += contrib[amount]
                     prior = amount
 
+                overContrib = False
                 if self.meek:
-                    if contribTot > self.share: mult = rrr * self.p / contribTot
+                    if contribTot > self.share:
+                        mult = rrr * self.p / contribTot
+                        shouldContrib = self.share * self.p / contribTot
+                        overContrib = True
                     else: mult = self.p * rrr / self.share
                 else:
-                    if contribTot > rrr: mult = rrr * self.p / contribTot
+                    if contribTot > rrr:
+                        mult = rrr * self.p / contribTot
+                        shouldContrib = rrr * self.p / contribTot
+                        overContrib = True
                     else: mult = self.p
-                for amount in contrib.keys():
+                prior = 0
+                for amount in sorted(contrib.keys()):
+                    if overContrib and amount in self.f[self.R][c]:
+                        f = shouldContrib * contrib[amount] / (amount - prior)
+                        if f > self.maxKeep[self.R][c].get(amount,self.p):
+                            self.maxKeep[self.R][c][amount] = f
                     newamount = contrib[amount] * mult / self.p
                     self.count[self.R][c][amount] += tree[key]["n"] * newamount
                     self.totalCount[self.R][c] += tree[key]["n"] * newamount
                     rrr -= newamount
+                    prior = amount
 
             # If ballot not used up and more candidates, keep going
             if rrr > 0:
