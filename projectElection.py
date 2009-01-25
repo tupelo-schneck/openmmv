@@ -1,3 +1,13 @@
+# Note: "keep value" self.f we use to men the portion of the total amount given
+# by a single supporter.  In usual STV keep value means the portion of a ballot's
+# support given by a single supporter.  These are obviously related by quota.
+# In our case, using portion of share would mean that keep values would change
+# when adding a new funding level.  For example: suppose each of 25 supporters gives
+# $4 to get a project to $100.  Then the keep value is 4%.  That percentage also
+# works at $50 (each supporter give 4%, that is $2).  However, portion of ballot
+# changes: if a share is $8, each supporter gives 50% of the ballot to get the
+# project to $100; but 25% to get it to 50 and 25% to get it from 50 to 100.
+
 # TODO: epsilons & fudge factors
 # TODO: ballot priors
 # TODO: ties
@@ -40,7 +50,6 @@ class ProjectElection(RecursiveSTV):
         self.eliminableResources = []
         self.resourcesWantedOfLeastNonLoser = None
         self.totalCount = []
-        self.maxKeep = []
 
 ###
 
@@ -58,11 +67,9 @@ class ProjectElection(RecursiveSTV):
         RecursiveSTV.allocateRound(self)
         self.count[self.R] = [0] * self.b.nProj
         self.totalCount.append([0] * self.b.nProj) # just used for printing results
-        self.maxKeep.append([0] * self.b.nProj)
         for c in range(self.b.nProj):
             self.count[self.R][c] = {}
             self.f[self.R][c] = {}
-            self.maxKeep[self.R][c] = {}
         if self.R == 0:
             self.winAmount = [[0] * self.b.nProj]
             self.eliminatedAbove = [[self.maximum[p] for p in range(self.b.nProj)]]
@@ -85,7 +92,11 @@ class ProjectElection(RecursiveSTV):
 
     def updateCount(self):
         """Called at end of each iteration to set count, exhausted, thresh, surplus."""
-        
+
+        # temporary round-to-round track of largest values given to funding levles
+        self.maxKeep = [0] * self.b.nProj
+        for c in range(self.b.nProj):
+            self.maxKeep[c] = {}
         self.treeCount(self.tree, self.share)
 
         # compute thresh and surplus
@@ -284,8 +295,8 @@ class ProjectElection(RecursiveSTV):
                 if amount > self.winAmount[self.R-1][c]:
                     break
                 oldf = self.f[self.R-1][c].get(amount,self.supportLimit)
-                if oldf > self.maxKeep[self.R][c].get(amount,self.p):
-                    oldf = self.maxKeep[self.R][c][amount]
+                if oldf > self.maxKeep[c].get(amount,self.p):
+                    oldf = self.maxKeep[c][amount]
                 f, r = divmod(oldf * (amount - prior),
                       self.count[self.R-1][c][amount])
                 if r > 0: f += 1
@@ -410,10 +421,12 @@ class ProjectElection(RecursiveSTV):
                     else: mult = self.p
                 prior = 0
                 for amount in sorted(contrib.keys()):
-                    if overContrib and amount in self.f[self.R][c]:
+                    if overContrib:
                         f = shouldContrib * contrib[amount] / (amount - prior)
-                        if f > self.maxKeep[self.R][c].get(amount,self.p):
-                            self.maxKeep[self.R][c][amount] = f
+                        if f > self.maxKeep[c].get(amount,self.p):
+                            self.maxKeep[c][amount] = f
+                    else:
+                        self.maxKeep[c][amount] = self.p
                     newamount = contrib[amount] * mult / self.p
                     self.count[self.R][c][amount] += tree[key]["n"] * newamount
                     self.totalCount[self.R][c] += tree[key]["n"] * newamount
