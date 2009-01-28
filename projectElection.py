@@ -11,7 +11,8 @@
 # TODO: epsilons & fudge factors
 # TODO: ballot priors
 # TODO: ties
-# TODO: make tree really merge
+
+import itertools
 
 from projectBallots import *
 from STV import *
@@ -42,8 +43,8 @@ class ProjectElection(RecursiveSTV):
         self.supportLimit = self.p
         if self.b.supportObligation!=None and self.b.supportObligation>0:
             self.supportLimit = self.p * 100 / self.b.nBallots / self.b.supportObligation + 1
-        self.minimum = [self.p*self.b.minimum[c] for c in range(self.b.nProj)]
-        self.maximum = [self.p*self.b.maximum[c] for c in range(self.b.nProj)]
+        self.minimum = [self.p*self.b.minimum[c] for c in xrange(self.b.nProj)]
+        self.maximum = [self.p*self.b.maximum[c] for c in xrange(self.b.nProj)]
         self.winAmount = []
         self.eliminatedAbove = []
         self.resourcesWanted = []
@@ -67,12 +68,12 @@ class ProjectElection(RecursiveSTV):
         RecursiveSTV.allocateRound(self)
         self.count[self.R] = [0] * self.b.nProj
         self.totalCount.append([0] * self.b.nProj) # just used for printing results
-        for c in range(self.b.nProj):
+        for c in xrange(self.b.nProj):
             self.count[self.R][c] = {}
             self.f[self.R][c] = {}
         if self.R == 0:
             self.winAmount = [[0] * self.b.nProj]
-            self.eliminatedAbove = [[self.maximum[p] for p in range(self.b.nProj)]]
+            self.eliminatedAbove = [[self.maximum[p] for p in xrange(self.b.nProj)]]
         else:
             self.winAmount.append(self.winAmount[self.R-1][:])
             self.eliminatedAbove.append(self.eliminatedAbove[self.R-1][:])
@@ -85,7 +86,8 @@ class ProjectElection(RecursiveSTV):
         """Called at start of election to set up tree of ballots and keep values self.f."""
         RecursiveSTV.initializeTreeAndKeepValues(self)
         self.tree["bi"] = []
-        for c in range(self.b.nProj):
+        self.tree["i"] = []
+        for c in xrange(self.b.nProj):
             self.f[0][c] = {}
 
 ###
@@ -95,17 +97,17 @@ class ProjectElection(RecursiveSTV):
 
         # temporary round-to-round track of largest values given to funding levles
         self.maxKeep = [0] * self.b.nProj
-        for c in range(self.b.nProj):
+        for c in xrange(self.b.nProj):
             self.maxKeep[c] = {}
         self.treeCount(self.tree, self.share)
 
         # compute thresh and surplus
         # Note: MMV doesn't actually use exhausted or thresh.
-        self.exhausted[self.R] = self.p*self.b.nResources 
-        for c in self.winners + self.purgatory:
-		for v in self.count[self.R][c].values():
-                    self.exhausted[self.R] -= v
-        self.updateThresh()
+        # self.exhausted[self.R] = self.p*self.b.nResources 
+        # for c in self.winners + self.purgatory:
+	# 	for v in self.count[self.R][c].values():
+        #            self.exhausted[self.R] -= v
+        # self.updateThresh()
         for c in self.winners + self.purgatory:
             prior = 0
             for amount in sorted(self.count[self.R][c].keys()):
@@ -181,7 +183,7 @@ class ProjectElection(RecursiveSTV):
 
         s = 0
         self.resourcesWantedOfLeastNonLoser = 0
-        for i in range(len(ppp)):
+        for i in xrange(len(ppp)):
             c = ppp[i]
             if i<len(ppp)-1:
                 nextResourcesWanted = self.resourcesWanted[R][ppp[i+1]]
@@ -255,7 +257,7 @@ class ProjectElection(RecursiveSTV):
 
         totalLosers = []
         winners = []
-        for c, amount in zip(losers,amounts):
+        for c, amount in itertools.izip(losers,amounts):
             self.eliminatedAbove[self.R][c] = amount
             if self.winAmount[self.R][c] == self.eliminatedAbove[self.R][c]:
                 if self.winAmount[self.R][c] == 0:
@@ -313,15 +315,16 @@ class ProjectElection(RecursiveSTV):
 
 ###
       
-    def addBallotToTree(self, tree, ballotIndex, ballot="", amounts=""):
+    def addBallotToTree(self, tree, ballotIndex, start=0):
         """Part of tree counting.  Adds one ballot to this tree."""
 
-        if ballot == "":
-            ballot = self.b.packed[ballotIndex]
-            amounts = self.b.packedAmounts[ballotIndex]
+        ballot = self.b.packed[ballotIndex][start:]
+        amounts = self.b.packedAmounts[ballotIndex][start:]
         weight = self.b.weight[ballotIndex]
 
-        for c, amount in zip(ballot,amounts):
+        nextStart = start
+        for c, amount in itertools.izip(ballot,amounts):
+            nextStart += 1
             # TODO: deal with ballot priors (ask Robert)
             if c in self.purgatory + self.winners:
                 amount = amount * self.p
@@ -339,39 +342,74 @@ class ProjectElection(RecursiveSTV):
         if not key in tree:
             tree[key] = {}
             tree[key]["n"] = 0
-            tree[key]["c"] = c
+            tree[key]["i"] = [] # for each ballot in bi, which index to start at?
             tree[key]["bi"] = []
 
         tree[key]["n"] += weight
         tree[key]["bi"].append(ballotIndex) # we lazily instantiate the tree
+        tree[key]["i"].append(nextStart)
 
 ###
 
     def updateTree(self, tree):
-        """In OpenSTV this is called each round to modify the tree to deal with
-        new winners and new losers.  MMV doesn't bother, and modifies the tree
-        during each tree count.
+        """This is called each round before counting to modify the tree to deal with
+        new winners and new losers.
         """
-        pass
+        for key in tree.keys():
+            if key == "n": continue
+            if key == "i": continue
+            if key == "bi": continue
 
+            self.updateTree(tree[key])
+            c, bamount = key
+            newAmount = self.eliminatedAbove[self.R][c]
+            if bamount <= newAmount: continue
+            if newAmount < self.minimum[c]:
+                treeToMerge = tree[key]
+                del tree[key]
+                self.mergeTree(treeToMerge,tree)
+            else:
+                newKey = (c,newAmount)
+                if newKey in tree:
+                    tree[newKey]["n"] += tree[key]["n"]
+                    treeToMerge = tree[key]
+                    del tree[key]
+                    self.mergeTree(treeToMerge,tree)
+                else:
+                    tree[newKey] = tree[key]
+                    del tree[key]
+
+###
+
+    def mergeTree(self,treeToMerge,tree):
+        """Merges two trees.  Doesn't deal with weight n."""
+        tree["bi"] += treeToMerge["bi"]
+        tree["i"] += treeToMerge["i"]
+        for key in treeToMerge.keys():
+            if key == "n": continue
+            if key == "i": continue
+            if key == "bi": continue
+
+            if key in tree:
+                tree[key]["n"] += treeToMerge[key]["n"]
+                self.mergeTree(tree[key],treeToMerge[key])
+            else:
+                tree[key] = treeToMerge[key]
+            del treeToMerge[key]
+    
 ###
 
     def treeCount(self, tree, remainder):
         """Called from updateCount to traverse the ballot tree.  Recursive."""
-        
-        for i in tree["bi"]:
-            ballot = self.b.packed[i]
-            amounts = self.b.packedAmounts[i]
-            j = ballot.index(tree["c"])
-            ballot2 = ballot[j+1:]
-            amounts2 = amounts[j+1:]
-            self.addBallotToTree(tree, i, ballot2, amounts2)
+        for bi, i in itertools.izip(tree["bi"],tree["i"]):
+            self.addBallotToTree(tree, bi, i)
         tree["bi"] = []
+        tree["i"] = []
 
         # Iterate over the next candidates on the ballots
         for key in tree.keys():
             if key == "n": continue
-            if key == "c": continue
+            if key == "i": continue
             if key == "bi": continue
 
             c, bamount = key

@@ -1,4 +1,4 @@
-#include <Python.h>
+#include "/Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Python.framework/Versions/2.3/include/python2.3/Python.h"
 #include <caml/mlvalues.h>
 #include <caml/alloc.h>
 #include <caml/memory.h>
