@@ -22,7 +22,7 @@ ifeq ($(UNAME),Darwin)
 PYTHONINCDIR = /opt/local/include/python2.5
 PYTHONLIBDIR = /opt/local/lib
 CAMLDIR = /opt/local/lib/ocaml
-SOLINK = MACOSX_DEPLOYMENT_TARGET=10.3 $(CC) -bundle -undefined dynamic_lookup -read_only_relocs suppress
+SOLINK = MACOSX_DEPLOYMENT_TARGET=10.3 $(CC)  -mmacosx-version-min=10.4 -bundle -undefined dynamic_lookup -read_only_relocs suppress
 SOLINKLIBS = -L$(CAMLDIR) -lasmrun
 SOEXT = so
 else
@@ -47,6 +47,9 @@ endif
 MLFLAGS = -I obj
 MLLINKFLAGS = -cclib -L$(PYTHONLIBDIR) -cclib -lpython2.5
 CFLAGS = -Wall -I $(CAMLDIR) -I $(PYTHONINCDIR)
+ifeq ($(UNAME),Darwin)
+CFLAGS =  -mmacosx-version-min=10.4 -Wall -I $(CAMLDIR) -I $(PYTHONINCDIR)
+endif
 
 vpath %.o obj
 vpath %.cmi obj
