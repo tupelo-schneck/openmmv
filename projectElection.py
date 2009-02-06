@@ -103,11 +103,11 @@ class ProjectElection(RecursiveSTV):
 
         # compute thresh and surplus
         # Note: MMV doesn't actually use exhausted or thresh.
-        # self.exhausted[self.R] = self.p*self.b.nResources 
-        # for c in self.winners + self.purgatory:
-	# 	for v in self.count[self.R][c].values():
-        #            self.exhausted[self.R] -= v
-        # self.updateThresh()
+        self.exhausted[self.R] = self.p*self.b.nResources 
+        for c in self.winners + self.purgatory:
+		for v in self.count[self.R][c].values():
+                   self.exhausted[self.R] -= v
+        self.updateThresh()
         for c in self.winners + self.purgatory:
             prior = 0
             for amount in sorted(self.count[self.R][c].keys()):
@@ -506,6 +506,18 @@ class ProjectElection(RecursiveSTV):
         self.count = self.totalCount
         res = RecursiveSTV.generateTextResults(self,maxWidth,style,round)
         self.count = savedcount
+        return res
+
+###
+
+    def getMaxNumber(self):
+        """Find the largest number to be printed in the results."""
+        if "count" in dir(self) and self.count != []:
+            savedcount = self.count
+            self.count = self.totalCount
+        res = RecursiveSTV.getMaxNumber(self)
+        if "count" in dir(self) and self.count != []:
+            self.count = savedcount
         return res
 
         

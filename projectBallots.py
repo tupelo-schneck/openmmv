@@ -295,8 +295,8 @@ class ProjectBallots(BltBallots):
             self.supportObligation = None
         else:
             self.supportObligation = int(out.group(2)[1:-1])
-    if self.nSeats > 254 or self.nSeats < 1:
-      raise RuntimeError, "The number of seats must be between 1 and 254."
+    if self.nSeats < 1:
+      raise RuntimeError, "The amount of resources must be greater than 0."
 
     # get withdrawn candidates
     while self.buffer[self.index] == "-":
