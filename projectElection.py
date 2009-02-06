@@ -444,27 +444,26 @@ class ProjectElection(RecursiveSTV):
                     prior = amount
 
                 overContrib = False
+                # TODO: some rounding issues to fix.
                 if self.meek:
                     if contribTot > self.share:
-                        mult = rrr * self.p / contribTot
                         shouldContrib = self.share * self.p / contribTot
                         overContrib = True
-                    else: mult = self.p * rrr / self.share
                 else:
                     if contribTot > rrr:
-                        mult = rrr * self.p / contribTot
                         shouldContrib = rrr * self.p / contribTot
                         overContrib = True
-                    else: mult = self.p
                 prior = 0
                 for amount in sorted(contrib.keys()):
                     if overContrib:
                         f = shouldContrib * contrib[amount] / (amount - prior)
                         if f > self.maxKeep[c].get(amount,0):
                             self.maxKeep[c][amount] = f
+                        newamount = rrr
                     else:
                         self.maxKeep[c][amount] = self.p
-                    newamount = contrib[amount] * mult / self.p
+                        newamount = contrib[amount]
+                        if self.meek: newamount = newamount * rrr / self.share
                     self.count[self.R][c][amount] += tree[key]["n"] * newamount
                     self.totalCount[self.R][c] += tree[key]["n"] * newamount
                     rrr -= newamount
