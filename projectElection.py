@@ -413,7 +413,6 @@ class ProjectElection(RecursiveSTV):
             if key == "bi": continue
 
             c, bamount = key
-            bamount = bamount * self.p
             if bamount > self.eliminatedAbove[self.R][c]: bamount = self.eliminatedAbove[self.R][c]
             rrr = remainder
             if bamount >= self.minimum[c]: # not fully eliminated
@@ -461,7 +460,7 @@ class ProjectElection(RecursiveSTV):
                 for amount in sorted(contrib.keys()):
                     if overContrib:
                         f = shouldContrib * contrib[amount] / (amount - prior)
-                        if f > self.maxKeep[c].get(amount,self.p):
+                        if f > self.maxKeep[c].get(amount,0):
                             self.maxKeep[c][amount] = f
                     else:
                         self.maxKeep[c][amount] = self.p
