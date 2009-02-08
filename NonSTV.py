@@ -13,7 +13,7 @@ Class Election
     Class Bucklin
 """
 
-## Copyright (C) 2003-2008 Jeffrey O'Neill
+## Copyright (C) 2003-2009 Jeffrey O'Neill
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ Class Election
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
 
-__revision__ = "$Id: NonSTV.py 456 2008-11-09 01:01:52Z jco8 $"
+__revision__ = "$Id: NonSTV.py 471 2009-01-31 19:29:20Z jco8 $"
 
 import sys
 import re

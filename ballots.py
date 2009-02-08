@@ -9,7 +9,7 @@ Class Ballots
   Class CambBallots
 """
 
-## Copyright (C) 2003-2008  Jeffrey O'Neill
+## Copyright (C) 2003-2009  Jeffrey O'Neill
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ Class Ballots
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
 
-__revision__ = "$Id: ballots.py 458 2008-11-10 02:46:43Z jco8 $"
+__revision__ = "$Id: ballots.py 471 2009-01-31 19:29:20Z jco8 $"
 
 import re
 import string
@@ -53,7 +53,7 @@ class Ballots:
   """
 
   def __init__(self, fName=""):
-    self.fName = None
+    self.fName = ""
     self.withdrawn = []
     self.names = []
     self.nCand = 0
@@ -72,7 +72,7 @@ class Ballots:
 ###
 
   @staticmethod
-  def process(fName, type=""):
+  def loadKnown(fName, type=""):
     if type == "txt" or (type=="" and fName[-3:] in ["txt", "TXT"]):
       return TextBallots(fName)
     elif type == "blt" or (type=="" and fName[-3:] in ["blt", "BLT"]):
@@ -82,6 +82,24 @@ class Ballots:
     else:
       raise RuntimeError, "Must specify the type of ballot file."
 
+###
+
+  @staticmethod
+  def loadUnknown(fName):
+    try:
+      b = BltBallots(fName)
+      return b
+    except:
+      try:
+        b = TextBallots(fName)
+        return b
+      except:
+        try:
+          b = CambBallots(fName)
+          return b
+        except:
+          raise RuntimeError, "Format of ballot file is not recognized."    
+          
 ###
 
   def saveAsBlt(self, fName, packed=False):

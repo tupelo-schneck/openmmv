@@ -3,7 +3,6 @@
 import os, random, time, timeit
 import ballots as ballots
 import STV as stv
-import elections
 import sys
 import projectBallots
 import projectElection
@@ -84,14 +83,6 @@ class Test:
         return winS
 
     @print_timing
-    def runMMV(self, file, b, e):
-        e.run_election()
-        winM = "MMV election winners: "
-        for item in e.results.winners():
-            winM += "%s " % e.projects[item[0]].name
-        return winM
-
-    @print_timing
     def runMMV2(self, file, b):
         try:
             e = projectElection.ProjectElection(b)
@@ -120,32 +111,26 @@ class Test:
                 b = ballots.BltBallots()
                 b.load(self.path+file)
                 s, sdelta =  self.runSTV(self.path + file,b)
-                e = elections.Election()
-                e.from_ballots(b)
-                m, mdelta =  self.runMMV(self.path + file,b,e)
                 b = projectBallots.ProjectBallots()
                 b.load(self.path+file)
                 m2, m2delta = self.runMMV2(self.path + file,b)
                 msg += "======================================\n"
                 msg += "Election file: %s\n" % file
                 msg += "%s\n" % s
-                msg += "%s\n" % m
                 msg += "%s\n\n" % m2
                 #print msg
-                self.times[file] = (sdelta, mdelta, m2delta)
-                if s[3:] != m[3:]:
-                    self.diff[file] = msg
-                elif s[3:] != m2[3:]:
+                self.times[file] = (sdelta, m2delta)
+                if s[3:] != m2[3:]:
                     self.diff[file] = msg
                 cur += 1
         print "Files with differing results:"
         for _, msg in sorted(self.diff.items()):
             print msg
-        print "\nTimings (in milliseconds):\nFilename\tSTV time\tMMV time\tMMV2 time"
+        print "\nTimings (in milliseconds):\nFilename\tSTV time\tMMV time"
         print "========================================================"
         for t in sorted(self.times.keys()):
-            s, m, m2 = self.times[t]
-            print "%s\t\t%4.3f\t\t%4.3f\t\t%4.3f" % (t, s, m, m2)
+            s, m2 = self.times[t]
+            print "%s\t\t%4.3f\t\t%4.3f" % (t, s, m2)
 
 if __name__ == "__main__":
     t = Test(max=float('inf'),randomize=False)
