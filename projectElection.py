@@ -392,7 +392,7 @@ class ProjectElection(RecursiveSTV):
 
             if key in tree:
                 tree[key]["n"] += treeToMerge[key]["n"]
-                self.mergeTree(tree[key],treeToMerge[key])
+                self.mergeTree(treeToMerge[key],tree[key])
             else:
                 tree[key] = treeToMerge[key]
             del treeToMerge[key]
