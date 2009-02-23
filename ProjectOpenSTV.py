@@ -343,7 +343,7 @@ class PBFEFrame(BFE.BFEFrame):
 
       # Open the file
       try:
-        self.b = ProjectBallots.loadUnknown(fName)
+        self.b = ProjectBallots.load(fName)
       except RuntimeError, msg:
         wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
         self.Destroy()
@@ -501,7 +501,7 @@ class MyFrame(wx.Frame):
 
     warnings.showwarning = self.catchWarnings
 
-    fn = os.path.join(HOME, "Icons", "pie.ico")
+    fn = os.path.join(OpenSTV.HOME, "Icons", "pie.ico")
     icon = wx.Icon(fn, wx.BITMAP_TYPE_ICO)
     self.SetIcon(icon)
 
@@ -523,7 +523,7 @@ class MyFrame(wx.Frame):
 
     # add the console as the first page
     self.notebook.AddPage(self.console, "Console")
-    self.output = Output(self.notebook)
+    self.output = OpenSTV.Output(self.notebook)
     sys.stdout = self.output
     sys.stderr = self.output
 
@@ -563,13 +563,12 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
     FileMenu = wx.Menu()
     self.AddMenuItem(FileMenu, 'New Election...',
                      'New Election...', self.OnNewElection)
+    FileMenu.AppendSeparator()
     self.AddMenuItem(FileMenu, 'Create New Ballot File...',
                      'Create New Ballot File...', self.OnNewBF)
     self.AddMenuItem(FileMenu, 'Edit Ballot File...',
                      'Edit Ballot File...', self.OnEditBF)
     FileMenu.AppendSeparator()
-    self.AddMenuItem(FileMenu, 'New Project Election...',
-                     'New Election...', self.OnNewProjectElection)
     self.AddMenuItem(FileMenu, 'Create New Project Ballot File...',
                      'Create New Project Ballot File...', self.OnNewProjectBF)
     self.AddMenuItem(FileMenu, 'Edit Project Ballot File...',
@@ -671,71 +670,23 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
 
     # Load the ballot file and create an election instance
     try:
-      b = Ballots.loadUnknown(filename)
+      if method == "ProjectElection":        
+        b = ProjectBallots()
+        b.load(filename)
+      else:
+        b = Ballots.loadUnknown(filename)
       cmd = "%s(b)" % method
       e = eval(cmd)
-      T = Tally(e)
+      T = OpenSTV.Tally(e)
     except RuntimeError, msg:
       wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
       return
 
     # Get info and options
-    dlg = OpenSTV.ElectionOptionsDialog(self, T)
-    dlg.Center()
-    if dlg.ShowModal() != wx.ID_OK:
-      dlg.Destroy()
-      return
-    dlg.Destroy()
-
-    # Run the election
-    try:
-      T.runElection()
-      txt = T.generateTextOutput()
-    except RuntimeError, msg:
-      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
-      return
-      
-    self.TallyList.append(T)
-
-    # create a new notebook page
-    tc = wx.TextCtrl(self.notebook, -1,
-                     style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.FIXED)
-    tc.SetMaxLength(0)
-    ps = tc.GetFont().GetPointSize()
-    font = wx.Font(ps, wx.MODERN, wx.NORMAL, wx.NORMAL)
-    tc.SetFont(font)
-    self.notebook.AddPage(tc, T.e.title)
-    page = self.notebook.GetPageCount() - 1
-    self.notebook.SetSelection(page)
-    self.notebook.GetPage(page).ChangeValue(txt)
-
-  ###
-  
-  def OnNewProjectElection(self, event):
-
-    # Get the ballot filename and election method
-    dlg = OpenSTV.ElectionMethodFileDialog(self)
-    dlg.Center()
-    if dlg.ShowModal() != wx.ID_OK:
-      dlg.Destroy()
-      return
-    filename = dlg.filename
-    method = dlg.method
-    dlg.Destroy()
-
-    # Load the ballot file and create an election instance
-    try:
-      b = ProjectBallots()
-      b.load(filename)
-      cmd = "%s(b)" % method
-      e = eval(cmd)
-      T = Tally(e)
-    except RuntimeError, msg:
-      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
-      return
-
-    # Get info and options
-    dlg = OpenSTV.ProjectElectionOptionsDialog(self, T)
+    if method == "ProjectElection":
+      dlg = OpenSTV.ProjectElectionOptionsDialog(self, T)
+    else:
+      dlg = OpenSTV.ElectionOptionsDialog(self, T)
     dlg.Center()
     if dlg.ShowModal() != wx.ID_OK:
       dlg.Destroy()
@@ -767,25 +718,25 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
   ###
     
   def OnNewBF(self, event):
-    window = BFE.BFEFrame(self, HOME, "new")
+    window = BFE.BFEFrame(self, OpenSTV.HOME, "new")
     window.Show(True)
 
   ###
     
   def OnNewProjectBF(self, event):
-    window = BFE.PBFEFrame(self, HOME, "new")
+    window = BFE.PBFEFrame(self, OpenSTV.HOME, "new")
     window.Show(True)
   
   ###
     
   def OnEditBF(self, event):
-    window = BFE.BFEFrame(self, HOME, "old")
+    window = BFE.BFEFrame(self, OpenSTV.HOME, "old")
     window.Show(True)
 
   ###
     
   def OnEditProjectBF(self, event):
-    window = BFE.PBFEFrame(self, HOME, "old")
+    window = BFE.PBFEFrame(self, OpenSTV.HOME, "old")
     window.Show(True)
   
   ###
@@ -1091,7 +1042,7 @@ class ProjectElectionOptionsDialog(wx.Dialog):
 
     resourcesL = wx.StaticText(self, -1, "Resources:")
     self.resourcesC = wx.SpinCtrl(self, -1)
-    #self.resourcesC.SetRange(1, len(self.T.e.b.names)-1)
+    self.resourcesC.SetRange(1, 9999999)
     self.resourcesC.SetValue(self.T.e.b.nResources)
 
     widthL = wx.StaticText(self, -1, "Display Width:")
@@ -1104,7 +1055,7 @@ class ProjectElectionOptionsDialog(wx.Dialog):
 Projects with "W" in the first column are withdrawn.  Double
 click on a project's name to change the status of the project.\
 """)
-    self.withdrawC = WithdrawCtrl(self, -1)
+    self.withdrawC = OpenSTV.WithdrawCtrl(self, -1)
     self.withdrawC.InsertColumn(0, "W")
     self.withdrawC.InsertColumn(1, "Project")
     for c, name in enumerate(self.T.e.b.names):
@@ -1262,9 +1213,6 @@ OpenSTV.ElectionMethodFileDialog = MyElectionMethodFileDialog
 
 ##################################################################
 ### the actual run code from OpenSTV.py
-
-HOME = OpenSTV.HOME
-Output = OpenSTV.Output
 
 if __name__ == '__main__':
  app = OpenSTV.App(0)
