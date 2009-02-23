@@ -21,54 +21,483 @@ import sys
 import warnings
 
 import version
-from BFE import *
+import OpenSTV
+import BFE
 from  NonSTV import *
 from STV import *
 from ballots import *
-
-# Path to OpenSTV application.  Used for accessing files.
-HOME = ""
-
-##################################################################
-
-# This is used to capture stdout/stderr from STV.py and send
-# it to a wxPython window.
-
-class Output:
-  def __init__(self, nb):
-    self.nb = nb
-  def write(self, txt):
-    self.nb.GetCurrentPage().AppendText(txt)
+from projectBallots import *
+from projectElection import *
 
 ##################################################################
+### BFE.py monkey patching ###
 
-class Tally():
+class MyBFEFrame(wx.Frame):
+
+  def __init__(self, parent, home, mode):
+    wx.Frame.__init__(self, parent, -1, "Ballot File Editor")
+
+    self.MakeMenu()
+    self.Bind(wx.EVT_CLOSE, self.OnCloseWindow)
+    self.logfName = ""
+
+    fn = os.path.join(home, "Icons", "blt.ico")
+    icon = wx.Icon(fn, wx.BITMAP_TYPE_ICO)
+    self.SetIcon(icon)
+
+    self.EditBallotFile(mode, parent)
+
+    # Set the window title to include the filename
+    title = "%s - %s" % (os.path.basename(self.b.fName),
+                         "Ballot File Editor")
+    self.SetTitle(title)
+
+    # Create a notebook with an editing page and a log page
+    nb = wx.Notebook(self, -1)
+
+    self.panel = BFE.BallotsPanel(nb, self.b)
+    nb.AddPage(self.panel, "Ballots")
+
+    self.logN = 1 # counter for display purposes
+    self.log = wx.TextCtrl(nb, -1,
+                           style=wx.TE_MULTILINE|wx.TE_READONLY|\
+                           wx.TE_WORDWRAP|wx.FIXED)
+    self.log.SetMaxLength(0)
+    nb.AddPage(self.log, "Log")
+
+    # Initialize
+    if mode == "new":
+      self.panel.NeedToSaveBallots = True
+      self.Log("Created a new ballot file.")
+    elif mode == "old":
+      self.panel.NeedToSaveBallots = False
+      self.Log("Loaded %d ballots from file %s." %\
+               (self.b.nBallots, os.path.basename(self.b.fName)))
+    else:
+      assert(0)
+
+    # Set up the sizer
+    sizer = wx.BoxSizer()
+    sizer.Add(nb, 1, wx.EXPAND, 0)
+    self.SetSizer(sizer)
+    sizer.Fit(self)
+    sizer.SetSizeHints(self)
+
+  ###
   
-  def __init__(self, e):
-    self.dispWidth = 120
-    self.e = e
+  def EditBallotFile(self, mode, parent):
+    if mode == "new":
 
-  def runElection(self):
-    self.e.runElection()
+      # Create an empty ballots class instance
+      self.b = BltBallots()
+
+      # Get the candidate names from the user
+      dlg = BFE.CandidatesDialog(parent, self.b)
+      dlg.Center()
+      if dlg.ShowModal() != wx.ID_OK:
+        dlg.Destroy()
+        self.Destroy()
+        return
+      dlg.Destroy()
+        
+    # Edit an existing ballot file
+    elif mode == "old":
+      dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
+                          style=wx.OPEN|wx.CHANGE_DIR)
+      if dlg.ShowModal() != wx.ID_OK:
+        dlg.Destroy()
+        self.Destroy()
+        return
+      fName = dlg.GetPath()
+      dlg.Destroy()
+
+      # Open the file
+      try:
+        self.b = Ballots.loadUnknown(fName)
+      except RuntimeError, msg:
+        wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+        self.Destroy()
+        return
+
+    else:
+      assert(0)
+
+  def Log(self, txt):
+
+    # create a prompt for each new line
+    prompt = "%3d: " % self.logN
+    self.log.AppendText(prompt + txt + "\n")
+    self.logN += 1
+
+  ###
     
-  def generateTextOutput(self):
-    txt = self.e.generateTextResults(self.dispWidth)
-    return txt
+  def MakeMenu(self):
 
-  def generateERSCSVOutput(self):
-    csv = self.e.generateERSCSVResults()
-    return csv
+    fileMenu = wx.Menu()
 
-  def generateHTMLOutput(self):
-    html = self.e.generateHTMLResults()
-    return html
+    append = fileMenu.Append(-1, "A&ppend ballots from file...")
+    saveBallots = fileMenu.Append(-1, "&Save ballots")
+    saveBallotsAs = fileMenu.Append(-1, "Save ballots &as...")
+    saveLog = fileMenu.Append(-1, "Save &log")
+    saveLogAs = fileMenu.Append(-1, "Save log as...")
+    exitBFE = fileMenu.Append(wx.ID_EXIT, "E&xit")
+
+    self.Bind(wx.EVT_MENU, self.OnAppendBF, append)
+    self.Bind(wx.EVT_MENU, self.OnSaveBallots, saveBallots)
+    self.Bind(wx.EVT_MENU, self.OnSaveBallotsAs, saveBallotsAs)
+    self.Bind(wx.EVT_MENU, self.OnSaveLog, saveLog)
+    self.Bind(wx.EVT_MENU, self.OnSaveLogAs, saveLogAs)
+    self.Bind(wx.EVT_MENU, self.OnExit, exitBFE)
+
+    if wx.Platform == "__WXMAC__":
+      wx.App.SetMacExitMenuItemId(wx.ID_EXIT)
+
+    menuBar = wx.MenuBar()
+    menuBar.Append(fileMenu, "&File")
+    self.SetMenuBar(menuBar)
+
+  ### File Menu
+
+  def OnAppendBF(self, event):
+
+    # Get the filename of the ballots to be appended
+    dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
+                        style=wx.OPEN|wx.CHANGE_DIR)
+    if dlg.ShowModal() != wx.ID_OK:
+      dlg.Destroy()
+      return
+    fName = dlg.GetPath()
+    dlg.Destroy()
+
+    # Attempt to load the ballots
+    try:
+      bb = Ballots.loadUnknown(fName)
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+      return
+
+    # Attempt to append the ballots
+    try:
+      self.b.append(bb)
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+    else:
+      self.Log("Appended %d ballots from file %s." %\
+               (bb.nBallots, os.path.basename(bb.fName)))
+
+    self.panel.NeedToSaveBallots = True
+    self.panel.UpdatePanel()
     
+  ###
+      
+  def OnSaveBallots(self, event):
+
+    if self.b.fName == "":
+      self.OnSaveBallotsAs(event)
+      return
+
+    try:
+      self.b.save()
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+      return
+    self.panel.NeedToSaveBallots = False
+
+  ###
+
+  def OnSaveBallotsAs(self, event):
+
+    # Ask the user to choose the filename.
+    dlg = wx.FileDialog(self, "Save Ballot File", os.getcwd(), "",
+                        style=wx.SAVE|wx.OVERWRITE_PROMPT|wx.CHANGE_DIR)
+    if dlg.ShowModal() != wx.ID_OK:
+      dlg.Destroy()
+      return
+    self.b.fName = dlg.GetPath()
+    dlg.Destroy()
+
+    # Save
+    try:
+      self.b.save()
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+      return
+    self.panel.NeedToSaveBallots = False
+
+    # Set the window title to include the filename
+    title = "%s - %s" % (os.path.basename(self.b.fName),
+                         "Ballot File Editor")
+    self.SetTitle(title)
+    self.panel.UpdatePanel()
+
+  ###
+
+  def OnSaveLog(self, event):
+
+    if self.logfName == "":
+      self.OnSaveLogAs(event)
+      return
+
+    try:
+      self.log.SaveFile(self.logfName)
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+      return
+
+    self.panel.NeedToSaveLog = False
+
+  ###
+    
+  def OnSaveLogAs(self, event):
+    dlg = wx.FileDialog(self, "Save Log to a File",
+                        os.getcwd(), "", "All Files|*.*",
+                        style=wx.SAVE|wx.OVERWRITE_PROMPT|wx.CHANGE_DIR)
+    if dlg.ShowModal() != wx.ID_OK:
+      dlg.Destroy()
+      return
+    self.logfName = dlg.GetPath()
+    dlg.Destroy()
+
+    try:
+      self.log.SaveFile(self.logfName)
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+      return
+
+    self.panel.NeedToSaveLog = False
+
+  ###
+    
+  def OnExit(self, event):
+    self.Close()
+
+  ### Other Event Handlers
+
+  def OnCloseWindow(self, event):
+
+    # Check to see if the current ballot is empty and warn user
+    if len(self.b.raw[self.panel.i]) == 0:
+      txt = "The current ballot is empty.  Ok to close editor?"
+      code = wx.MessageBox(txt, "Warning", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
+      if code == wx.CANCEL:
+        # Don't exit
+        event.Veto()
+        return
+
+    # Ask user if we should save ballots.
+    if self.panel.NeedToSaveBallots == True:
+      if self.b.fName == "":
+        msg = "Do you want to save the ballots?"
+      else:
+        msg = "Do you want to save the ballots to %s?" % self.b.fName
+      saveBallots = wx.MessageBox(msg, "Warning",
+                                  wx.YES_NO|wx.CANCEL|wx.ICON_INFORMATION)
+      if saveBallots == wx.CANCEL:
+        event.Veto() # Don't exit
+        return
+      elif saveBallots == wx.YES:
+        self.OnSaveBallots(None) # Save ballots
+
+    # Ask user if we should save the log.
+    if self.panel.NeedToSaveLog == True:
+      msg = "Do you want to save the log for ballot file %s?" %\
+            os.path.basename(self.b.fName)
+      saveLog = wx.MessageBox(msg, "Warning",
+                                  wx.YES_NO|wx.CANCEL|wx.ICON_INFORMATION)
+      if saveLog == wx.CANCEL:
+        event.Veto() # Don't exit
+        return
+      elif saveLog == wx.YES:
+        self.OnSaveLog(None) # Save log
+
+    self.Destroy()
+
+####################
+
+class PBFEFrame(BFE.BFEFrame):
+  def EditBallotFile(self, mode, parent):
+    if mode == "new":
+
+      # Create an empty ballots class instance
+      self.b = ProjectBallots()
+
+      # Get the projects info from the user
+      dlg = BFE.ProjectDialog(parent, self.b)
+      dlg.Center()
+      if dlg.ShowModal() != wx.ID_OK:
+        dlg.Destroy()
+        self.Destroy()
+        return
+      dlg.Destroy()
+        
+    # Edit an existing ballot file
+    elif mode == "old":
+      dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
+                          style=wx.OPEN|wx.CHANGE_DIR)
+      if dlg.ShowModal() != wx.ID_OK:
+        dlg.Destroy()
+        self.Destroy()
+        return
+      fName = dlg.GetPath()
+      dlg.Destroy()
+
+      # Open the file
+      try:
+        self.b = ProjectBallots.loadUnknown(fName)
+      except RuntimeError, msg:
+        wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+        self.Destroy()
+        return
+
+    else:
+      assert(0)
+
+  ###
+
+  def OnAppendBF(self, event):
+
+    # Get the filename of the ballots to be appended
+    dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
+                        style=wx.OPEN|wx.CHANGE_DIR)
+    if dlg.ShowModal() != wx.ID_OK:
+      dlg.Destroy()
+      return
+    fName = dlg.GetPath()
+    dlg.Destroy()
+
+    # Attempt to load the ballots
+    try:
+      bb = ProjectBallots.loadUnknown(fName)
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+      return
+
+    # Attempt to append the ballots
+    try:
+      self.b.append(bb)
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+    else:
+      self.Log("Appended %d ballots from file %s." %\
+               (bb.nBallots, os.path.basename(bb.fName)))
+
+    self.panel.NeedToSaveBallots = True
+    self.panel.UpdatePanel()
+
+####################
+
+class ProjectsDialog(wx.Dialog):
+
+  def __init__(self, parent, b):
+    wx.Dialog.__init__(self, parent, -1, "Projects")
+
+    self.b = b
+
+    # Explanation
+    txt = wx.StaticText(self, -1, """\
+Enter the candidates' names one by one.  To remove a candidate
+whose name has already been entered, double click on the candidate's
+name below.""")
+
+    # Candidate entry
+    candidateL = wx.StaticText(self, -1, "Candidate to add:")
+    self.candidateC = wx.TextCtrl(self, -1, "", style=wx.TE_PROCESS_ENTER)
+    self.Bind(wx.EVT_TEXT_ENTER, self.OnEnter, self.candidateC)
+    candidateB = wx.Button(self, -1, "Add")
+    self.Bind(wx.EVT_BUTTON, self.OnAdd, candidateB)
+
+    # Candidate list
+    listL = wx.StaticText(self, -1, "Candidates:")
+    self.listC = wx.ListBox(self, -1, choices=self.b.names, size=(-1,100))
+    self.Bind(wx.EVT_LISTBOX_DCLICK, self.OnListDClick, self.listC)
+    blank = wx.StaticText(self, -1, "")
+
+    # Buttons
+    ok = wx.Button(self, wx.ID_OK)
+    self.Bind(wx.EVT_BUTTON, self.OnOK, ok)
+    cancel = wx.Button(self, wx.ID_CANCEL)
+
+    # Sizers
+    sizer = wx.BoxSizer(wx.VERTICAL)
+    sizer.Add(txt, 0, wx.ALL, 5)
+    sizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, 5)
+
+    fgs = wx.FlexGridSizer(2, 3, 5, 5)
+    fgs.Add(candidateL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(self.candidateC, 0, wx.EXPAND)
+    fgs.Add(candidateB, 0)
+    fgs.Add(listL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(self.listC, 0, wx.EXPAND)
+    fgs.Add(blank, 0)
+    fgs.AddGrowableCol(1)
+
+    sizer.Add(fgs, 0, wx.EXPAND|wx.ALL, 5)
+    bs = wx.StdDialogButtonSizer()
+    bs.AddButton(ok)
+    bs.AddButton(cancel)
+    bs.Realize()
+    sizer.Add(bs, 0, wx.EXPAND|wx.ALL, 5)
+
+    self.SetSizer(sizer)
+    sizer.Fit(self)
+
+  ###
+
+  def OnOK(self, event):
+    # Check to see if name is entered and not added
+    name = self.candidateC.GetValue().strip()
+    if name == "":
+      event.Skip()
+    else:
+      wx.MessageBox("Name entered but not added.  Please hit the 'Add' "
+                    "button or clear the name in the text box to continue.",
+                    "Message", wx.OK|wx.ICON_INFORMATION)
+
+  ###
+
+  def OnEnter(self, event):
+    self.OnAdd(event)
+    
+  ###
+
+  def OnAdd(self, event):
+    # Get the name in the text box
+    name = self.candidateC.GetValue().strip()
+    # Add the name to the ballots instance and update the list control
+    if name not in self.b.names:
+      self.b.names.append(name)
+      self.b.nCand = len(self.b.names)
+      self.listC.Set(self.b.names)
+    else:
+      wx.MessageBox("Can't have two candidates with the same name.",
+                    "Error", wx.OK|wx.ICON_ERROR)
+    # Clear the text box to allow user to enter another name
+    self.candidateC.Clear()
+    self.candidateC.SetFocus()
+    
+  ###
+
+  def OnListDClick(self, event):
+    # Remove the candidate from the ballots instance and update the control
+    c = self.listC.GetSelection()
+    self.b.names.pop(c)
+    self.b.nCand = len(self.b.names)
+    self.listC.Set(self.b.names)
+
+####################
+
+# replacing the various edited stuff in BFE.py
+BFE.BFEFrame = MyBFEFrame
+BFE.PBFEFrame = PBFEFrame
+BFE.ProjectsDialog = ProjectsDialog
+
 ##################################################################
+### OpenSTV.py monkey patching ###
 
-class Frame(wx.Frame):
+class MyFrame(wx.Frame):
 
   def __init__(self, parent):
-    wx.Frame.__init__(self, parent, -1, "OpenSTV", size=(900,600))
+    wx.Frame.__init__(self, parent, -1, "OpenSTV with Projects", size=(900,600))
 
     warnings.showwarning = self.catchWarnings
 
@@ -138,6 +567,14 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
                      'Create New Ballot File...', self.OnNewBF)
     self.AddMenuItem(FileMenu, 'Edit Ballot File...',
                      'Edit Ballot File...', self.OnEditBF)
+    FileMenu.AppendSeparator()
+    self.AddMenuItem(FileMenu, 'New Project Election...',
+                     'New Election...', self.OnNewProjectElection)
+    self.AddMenuItem(FileMenu, 'Create New Project Ballot File...',
+                     'Create New Project Ballot File...', self.OnNewProjectBF)
+    self.AddMenuItem(FileMenu, 'Edit Project Ballot File...',
+                     'Edit Project Ballot File...', self.OnEditProjectBF)
+    FileMenu.AppendSeparator()
     id = self.AddMenuItem(FileMenu, 'Exit',
                      'Exit the application', self.OnExit, "Exit")
     if wx.Platform == "__WXMAC__":
@@ -223,7 +660,7 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
   def OnNewElection(self, event):
 
     # Get the ballot filename and election method
-    dlg = ElectionMethodFileDialog(self)
+    dlg = OpenSTV.ElectionMethodFileDialog(self)
     dlg.Center()
     if dlg.ShowModal() != wx.ID_OK:
       dlg.Destroy()
@@ -243,7 +680,62 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
       return
 
     # Get info and options
-    dlg = ElectionOptionsDialog(self, T)
+    dlg = OpenSTV.ElectionOptionsDialog(self, T)
+    dlg.Center()
+    if dlg.ShowModal() != wx.ID_OK:
+      dlg.Destroy()
+      return
+    dlg.Destroy()
+
+    # Run the election
+    try:
+      T.runElection()
+      txt = T.generateTextOutput()
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+      return
+      
+    self.TallyList.append(T)
+
+    # create a new notebook page
+    tc = wx.TextCtrl(self.notebook, -1,
+                     style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.FIXED)
+    tc.SetMaxLength(0)
+    ps = tc.GetFont().GetPointSize()
+    font = wx.Font(ps, wx.MODERN, wx.NORMAL, wx.NORMAL)
+    tc.SetFont(font)
+    self.notebook.AddPage(tc, T.e.title)
+    page = self.notebook.GetPageCount() - 1
+    self.notebook.SetSelection(page)
+    self.notebook.GetPage(page).ChangeValue(txt)
+
+  ###
+  
+  def OnNewProjectElection(self, event):
+
+    # Get the ballot filename and election method
+    dlg = OpenSTV.ElectionMethodFileDialog(self)
+    dlg.Center()
+    if dlg.ShowModal() != wx.ID_OK:
+      dlg.Destroy()
+      return
+    filename = dlg.filename
+    method = dlg.method
+    dlg.Destroy()
+
+    # Load the ballot file and create an election instance
+    try:
+      b = ProjectBallots()
+      b.load(filename)
+      cmd = "%s(b)" % method
+      e = eval(cmd)
+      T = Tally(e)
+    except RuntimeError, msg:
+      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+      return
+
+    # Get info and options
+    dlg = OpenSTV.ProjectElectionOptionsDialog(self, T)
     dlg.Center()
     if dlg.ShowModal() != wx.ID_OK:
       dlg.Destroy()
@@ -275,14 +767,26 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
   ###
     
   def OnNewBF(self, event):
-    BFE = BFEFrame(self, HOME, "new")
-    BFE.Show(True)
+    window = BFE.BFEFrame(self, HOME, "new")
+    window.Show(True)
+
+  ###
+    
+  def OnNewProjectBF(self, event):
+    window = BFE.PBFEFrame(self, HOME, "new")
+    window.Show(True)
   
   ###
     
   def OnEditBF(self, event):
-    BFE = BFEFrame(self, HOME, "old")
-    BFE.Show(True)
+    window = BFE.BFEFrame(self, HOME, "old")
+    window.Show(True)
+
+  ###
+    
+  def OnEditProjectBF(self, event):
+    window = BFE.PBFEFrame(self, HOME, "old")
+    window.Show(True)
   
   ###
     
@@ -432,7 +936,7 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
   ### Help Menu
 
   def OnAbout(self, event):
-    dlg = AboutDialog(self)
+    dlg = OpenSTV.AboutDialog(self)
     dlg.Center()
     dlg.ShowModal()
     dlg.Destroy()
@@ -440,24 +944,24 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
   ###
 
   def OnDetails(self, event):
-    frame = HTMLFrame(self, "Method Details", "Details.html")
+    frame = OpenSTV.HTMLFrame(self, "Method Details", "Details.html")
     frame.Show(True)
 
   ###
 
   def OnHelp(self, event):
-    frame = HTMLFrame(self, "OpenSTV Help", "Help.html")
+    frame = OpenSTV.HTMLFrame(self, "OpenSTV Help", "Help.html")
     frame.Show(True)
 
   ###
 
   def OnLicense(self, event):
-    frame = HTMLFrame(self, "GNU General Public License", "License.html")
+    frame = OpenSTV.HTMLFrame(self, "GNU General Public License", "License.html")
     frame.Show(True)
 
-##################################################################
+######
 
-class ElectionMethodFileDialog(wx.Dialog):
+class MyElectionMethodFileDialog(wx.Dialog):
 
   def __init__(self, parent):
     wx.Dialog.__init__(self, parent, -1, "Select Input File and Method")
@@ -469,6 +973,7 @@ See the Help menu for more information about the available methods.""")
 
     # The English description of methods and corresponding class name
     self.methods = {
+      "Movable Money Voting" : "ProjectElection",
       "Single Non-Transferable Vote" : "SNTV",
       "Approval Method" : "Approval",
       "Borda Count" : "Borda",
@@ -557,18 +1062,9 @@ See the Help menu for more information about the available methods.""")
 
     event.Skip() # do normal OK button processing
 
-##################################################################
+##########
 
-class WithdrawCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
-  
-  def __init__(self, parent, ID):
-    style = wx.LC_REPORT|wx.LC_SINGLE_SEL|wx.LC_HRULES|wx.LC_VRULES
-    wx.ListCtrl.__init__(self, parent, ID, style=style, size=(-1,100))
-    listmix.ListCtrlAutoWidthMixin.__init__(self)
-
-##################################################################
-
-class ElectionOptionsDialog(wx.Dialog):
+class ProjectElectionOptionsDialog(wx.Dialog):
 
   def __init__(self, parent, T):
     wx.Dialog.__init__(self, parent, -1, "Election Options")
@@ -593,28 +1089,24 @@ class ElectionOptionsDialog(wx.Dialog):
     self.dateC = wx.TextCtrl(self, -1, "")
     self.dateC.SetValue(self.T.e.date)
 
-    seatsL = wx.StaticText(self, -1, "Seats:")
-    self.seatsC = wx.SpinCtrl(self, -1)
-    self.seatsC.SetRange(1, len(self.T.e.b.names)-1)
-    self.seatsC.SetValue(self.T.e.nSeats)
-    if self.T.e.method in ["Bucklin", "Condorcet", "Supplemental Vote"]:
-      self.seatsC.SetValue(1)
-      self.seatsC.Enable(False)
-
+    resourcesL = wx.StaticText(self, -1, "Resources:")
+    self.resourcesC = wx.SpinCtrl(self, -1)
+    #self.resourcesC.SetRange(1, len(self.T.e.b.names)-1)
+    self.resourcesC.SetValue(self.T.e.b.nResources)
 
     widthL = wx.StaticText(self, -1, "Display Width:")
     self.widthC = wx.SpinCtrl(self, -1)
     self.widthC.SetRange(0, 200)
     self.widthC.SetValue(self.T.dispWidth)
 
-    # Withdraw candidates
+    # Withdraw projects
     withdrawTxt = wx.StaticText(self, -1, """\
-Candidates with "W" in the first column are withdrawn.  Double
-click on a candidate's name to change the status of the candidate.\
+Projects with "W" in the first column are withdrawn.  Double
+click on a project's name to change the status of the project.\
 """)
     self.withdrawC = WithdrawCtrl(self, -1)
     self.withdrawC.InsertColumn(0, "W")
-    self.withdrawC.InsertColumn(1, "Candidate")
+    self.withdrawC.InsertColumn(1, "Project")
     for c, name in enumerate(self.T.e.b.names):
       if c in self.T.e.withdrawn:
         self.withdrawC.InsertStringItem(c, "W")
@@ -632,90 +1124,28 @@ click on a candidate's name to change the status of the candidate.\
     ctrlList = []
 
     # precision
-    if self.T.e.method in ["Fractional Transfer STV",
-                           "MeekX STV", "WarrenX STV",
-                           "Meek STV", "Warren STV"]:
-      precL = wx.StaticText(self, -1, "Precision:")
-      self.precC = wx.SpinCtrl(self, -1)
-      self.precC.SetRange(0, 20)
-      self.precC.SetValue(self.T.e.prec)
-      labelList.append(precL)
-      ctrlList.append(self.precC)
-
-    # ballot completion
-    if self.T.e.method == "Borda":
-      ballotCompletionL = wx.StaticText(self, -1, "Ballot completion:")
-      choices = ["Off", "On"]
-      self.ballotCompletionC = wx.Choice(self, -1, choices = choices)
-      if self.T.e.ballotCompletion == True:
-        self.ballotCompletionC.SetStringSelection("On")
-      else:
-        self.ballotCompletionC.SetStringSelection("Off")        
-      labelList.append(ballotCompletionL)
-      ctrlList.append(self.ballotCompletionC)
-
-    # Condorcet completion method
-    if self.T.e.method == "Condorcet":
-      completionMethodL = wx.StaticText(self, -1, "Completion method:")
-      choices = ["Borda on Smith Set",
-                 "IRV on Smith Set",
-                 "Schwartz Sequential Dropping"]
-      self.completionMethodC = wx.Choice(self, -1, choices = choices)
-      self.completionMethodC.SetStringSelection(self.T.e.completion)
-      labelList.append(completionMethodL)
-      ctrlList.append(self.completionMethodC)
+#    if self.T.e.method in ["MMV"]:
+#      precL = wx.StaticText(self, -1, "Precision:")
+#      self.precC = wx.SpinCtrl(self, -1)
+#      self.precC.SetRange(0, 20)
+#      self.precC.SetValue(self.T.e.prec)
+#      labelList.append(precL)
+#      ctrlList.append(self.precC)
 
     # threshold
-    if self.T.e.method in ["Random Transfer STV", "Fractional Transfer STV",
-                           "Meek STV", "Warren STV"]:
-      thresh0L = wx.StaticText(self, -1, "Threshold:")
-      choices = ["Droop", "Hare"]
-      self.thresh0C = wx.Choice(self, -1, choices = choices)
-      self.thresh0C.SetStringSelection(self.T.e.threshName[0])
-      labelList.append(thresh0L)
-      ctrlList.append(self.thresh0C)
-      thresh1L = wx.StaticText(self, -1, "")
-      choices = ["Dynamic", "Static"]
-      self.thresh1C = wx.Choice(self, -1, choices = choices)
-      self.thresh1C.SetStringSelection(self.T.e.threshName[1])
-      labelList.append(thresh1L)
-      ctrlList.append(self.thresh1C)
-      if self.T.e.method != "Random Transfer STV":
-        thresh2L = wx.StaticText(self, -1, "")
-        choices = ["Whole", "Fractional"]
-        self.thresh2C = wx.Choice(self, -1, choices = choices)
-        self.thresh2C.SetStringSelection(self.T.e.threshName[2])
-        labelList.append(thresh2L)
-        ctrlList.append(self.thresh2C)
-
-    # delayed transfer of surplus and batch elimination
-    if self.T.e.method in ["Random Transfer STV", "Fractional Transfer STV"]:
-      delayedTransferL = wx.StaticText(self, -1, "Delay Surplus Tansfer:")
-      choices = ["Off", "On"]
-      self.delayedTransferC = wx.Choice(self, -1, choices = choices)
-      if self.T.e.delayedTransfer:
-        self.delayedTransferC.SetStringSelection("On")
-      else:
-        self.delayedTransferC.SetStringSelection("Off")
-      labelList.append(delayedTransferL)
-      ctrlList.append(self.delayedTransferC)
-      batchEliminationL = wx.StaticText(self, -1, "Batch elimination:")
-      choices = ["None", "Zero", "Losers", "Cutoff"]
-      self.batchEliminationC = wx.Choice(self, -1, choices = choices)
-      self.batchEliminationC.SetStringSelection(self.T.e.batchElimination)
-      self.Bind(wx.EVT_CHOICE, self.OnBatchElimination, self.batchEliminationC)
-      labelList.append(batchEliminationL)
-      ctrlList.append(self.batchEliminationC)
-      batchCutoffL = wx.StaticText(self, -1, "Batch cutoff:")
-      self.batchCutoffC = wx.SpinCtrl(self, -1)
-      self.batchCutoffC.SetRange(0, 10000)
-      self.batchCutoffC.SetValue(self.T.e.batchCutoff)
-      if self.T.e.batchElimination == "Cutoff":
-        self.batchCutoffC.Enable(True)
-      else:
-        self.batchCutoffC.Enable(False)
-      labelList.append(batchCutoffL)
-      ctrlList.append(self.batchCutoffC)
+#    if self.T.e.method in ["MMV"]:
+#      thresh1L = wx.StaticText(self, -1, "")
+#      choices = ["Dynamic", "Static"]
+#      self.thresh1C = wx.Choice(self, -1, choices = choices)
+#      self.thresh1C.SetStringSelection(self.T.e.threshName[1])
+#      labelList.append(thresh1L)
+#      ctrlList.append(self.thresh1C)
+#      thresh2L = wx.StaticText(self, -1, "")
+#      choices = ["Whole", "Fractional"]
+#      self.thresh2C = wx.Choice(self, -1, choices = choices)
+#      self.thresh2C.SetStringSelection(self.T.e.threshName[2])
+#      labelList.append(thresh2L)
+#      ctrlList.append(self.thresh2C)
 
     # Buttons
     ok = wx.Button(self, wx.ID_OK)
@@ -741,15 +1171,15 @@ click on a candidate's name to change the status of the candidate.\
     fgs.Add(self.titleC, 0, wx.EXPAND)
     fgs.Add(dateL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
     fgs.Add(self.dateC, 0, wx.EXPAND)
-    fgs.Add(seatsL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-    fgs.Add(self.seatsC, 0, wx.EXPAND)
+    fgs.Add(resourcesL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(self.resourcesC, 0, wx.EXPAND)
     fgs.Add(widthL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
     fgs.Add(self.widthC, 0, wx.EXPAND)
     fgs.AddGrowableCol(1)
     informationSizer.Add(fgs, 0, wx.EXPAND|wx.ALL, 5)
 
-    # Withdraw candidates
-    withdrawBox = wx.StaticBox(self, -1, "Withdraw Candidates")
+    # Withdraw projects
+    withdrawBox = wx.StaticBox(self, -1, "Withdraw Projects")
     withdrawSizer = wx.StaticBoxSizer(withdrawBox, wx.VERTICAL)
     sizer.Add(withdrawSizer, 0, wx.EXPAND|wx.ALL, 5)
 
@@ -799,7 +1229,7 @@ click on a candidate's name to change the status of the candidate.\
   def OnOK(self, event):
     self.T.e.title = self.titleC.GetValue()
     self.T.e.date = self.dateC.GetValue()
-    self.T.e.nSeats = self.seatsC.GetValue()
+    self.T.e.b.nResources = self.resourcesC.GetValue()
     self.T.dispWidth = self.widthC.GetValue()
     if vars(self).has_key("precC"):
       self.T.e.setOptions(prec=self.precC.GetValue())
@@ -824,70 +1254,18 @@ click on a candidate's name to change the status of the candidate.\
       self.T.e.setOptions(batchCutoff=self.batchCutoffC.GetValue())
     event.Skip() # do normal OK button processing
     
-##################################################################
-
-class AboutDialog(wx.Dialog):
-  "Dialog for about OpenSTV box."
-
-  def __init__(self, parent):
-    wx.Dialog.__init__(self, parent, -1, "About OpenSTV")
-
-    sizer = wx.BoxSizer(wx.VERTICAL)
-
-    fn = os.path.join(HOME, "Icons", "splash.png")
-    bmp = wx.Image(fn, wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-    bm = wx.StaticBitmap(self, -1, bmp)
-    sizer.Add(bm)
-
-    button = wx.Button(self, wx.ID_OK, "Close")
-    button.SetDefault()
-    sizer.Add(button, 0, wx.ALIGN_CENTER|wx.ALL, 5)
-
-    sizer.Fit(self)
-    self.SetAutoLayout(True)
-    self.SetSizer(sizer)
+#########
+# replacing the various edited stuff in OpenSTV.py
+OpenSTV.Frame = MyFrame
+OpenSTV.ProjectElectionOptionsDialog = ProjectElectionOptionsDialog
+OpenSTV.ElectionMethodFileDialog = MyElectionMethodFileDialog
 
 ##################################################################
+### the actual run code from OpenSTV.py
 
-class HTMLFrame(wx.Frame):
-  def __init__(self, parent, title, htmlFile):
-    wx.Frame.__init__(self, parent, -1, title, size=(600, 400))
-    self.win = wx.html.HtmlWindow(self, -1)
-    fn = os.path.join(HOME, htmlFile)
-    self.win.LoadFile(fn)
-
-##################################################################
-
-class App(wx.App):
-
-  def OnInit(self):
-    wx.InitAllImageHandlers()
-
-    # Need this to be able to access local files
-    global HOME
-    exePath = os.path.split(sys.argv[0])[0]
-    cwdPath = os.getcwd()
-    if exePath == ".":
-      HOME = cwdPath
-    else:
-      HOME = exePath
-
-    # Show a splash screen
-    png = os.path.join(HOME, "Icons", "splash.png")
-    bmp = wx.Image(png).ConvertToBitmap()
-    wx.SplashScreen(bmp,
-                    wx.SPLASH_CENTRE_ON_SCREEN | wx.SPLASH_TIMEOUT,
-                    5000, None, -1)
-
-    self.frame = Frame(None)
-    self.frame.Show(True)
-    self.frame.Center()
-    self.frame.Raise()
-    self.SetTopWindow(self.frame)
-    return True
-
-##################################################################
+HOME = OpenSTV.HOME
+Output = OpenSTV.Output
 
 if __name__ == '__main__':
-  app = App(0)
-  app.MainLoop()
+ app = OpenSTV.App(0)
+ app.MainLoop()

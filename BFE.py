@@ -24,7 +24,6 @@ import wx.lib.mixins.listctrl as listmix
 from NonSTV import *
 from STV import *
 from ballots import *
-from projectBallots import *
 
 ##################################################################
 
@@ -41,7 +40,42 @@ class BFEFrame(wx.Frame):
     icon = wx.Icon(fn, wx.BITMAP_TYPE_ICO)
     self.SetIcon(icon)
 
-    self.EditBallotFile(mode, parent)
+    # Edit a new ballot file
+    if mode == "new":
+
+      # Create an empty ballots class instance
+      self.b = BltBallots()
+
+      # Get the candidate names from the user
+      dlg = CandidatesDialog(parent, self.b)
+      dlg.Center()
+      if dlg.ShowModal() != wx.ID_OK:
+        dlg.Destroy()
+        self.Destroy()
+        return
+      dlg.Destroy()
+        
+    # Edit an existing ballot file
+    elif mode == "old":
+      dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
+                          style=wx.OPEN|wx.CHANGE_DIR)
+      if dlg.ShowModal() != wx.ID_OK:
+        dlg.Destroy()
+        self.Destroy()
+        return
+      fName = dlg.GetPath()
+      dlg.Destroy()
+
+      # Open the file
+      try:
+        self.b = Ballots.loadUnknown(fName)
+      except RuntimeError, msg:
+        wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+        self.Destroy()
+        return
+
+    else:
+      assert(0)
 
     # Set the window title to include the filename
     title = "%s - %s" % (os.path.basename(self.b.fName),
@@ -80,43 +114,6 @@ class BFEFrame(wx.Frame):
     sizer.SetSizeHints(self)
 
   ###
-  
-  def EditBallotFile(self, mode, parent):
-    if mode == "new":
-
-      # Create an empty ballots class instance
-      self.b = BltBallots()
-
-      # Get the candidate names from the user
-      dlg = CandidatesDialog(parent, self.b)
-      dlg.Center()
-      if dlg.ShowModal() != wx.ID_OK:
-        dlg.Destroy()
-        self.Destroy()
-        return
-      dlg.Destroy()
-        
-    # Edit an existing ballot file
-    elif mode == "old":
-      dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
-                          style=wx.OPEN|wx.CHANGE_DIR)
-      if dlg.ShowModal() != wx.ID_OK:
-        dlg.Destroy()
-        self.Destroy()
-        return
-      fName = dlg.GetPath()
-      dlg.Destroy()
-
-      # Open the file
-      try:
-        self.b = Ballots.loadUnknown(fName)
-      except RuntimeError, msg:
-        wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
-        self.Destroy()
-        return
-
-    else:
-      assert(0)
 
   def Log(self, txt):
 
@@ -307,78 +304,6 @@ class BFEFrame(wx.Frame):
         self.OnSaveLog(None) # Save log
 
     self.Destroy()
-
-##################################################################
-
-class PBFEFrame(BFEFrame):
-  def EditBallotFile(self, mode, parent):
-    if mode == "new":
-
-      # Create an empty ballots class instance
-      self.b = ProjectBallots()
-
-      # Get the projects info from the user
-      dlg = ProjectDialog(parent, self.b)
-      dlg.Center()
-      if dlg.ShowModal() != wx.ID_OK:
-        dlg.Destroy()
-        self.Destroy()
-        return
-      dlg.Destroy()
-        
-    # Edit an existing ballot file
-    elif mode == "old":
-      dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
-                          style=wx.OPEN|wx.CHANGE_DIR)
-      if dlg.ShowModal() != wx.ID_OK:
-        dlg.Destroy()
-        self.Destroy()
-        return
-      fName = dlg.GetPath()
-      dlg.Destroy()
-
-      # Open the file
-      try:
-        self.b = ProjectBallots.loadUnknown(fName)
-      except RuntimeError, msg:
-        wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
-        self.Destroy()
-        return
-
-    else:
-      assert(0)
-
-  ###
-
-  def OnAppendBF(self, event):
-
-    # Get the filename of the ballots to be appended
-    dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
-                        style=wx.OPEN|wx.CHANGE_DIR)
-    if dlg.ShowModal() != wx.ID_OK:
-      dlg.Destroy()
-      return
-    fName = dlg.GetPath()
-    dlg.Destroy()
-
-    # Attempt to load the ballots
-    try:
-      bb = ProjectBallots.loadUnknown(fName)
-    except RuntimeError, msg:
-      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
-      return
-
-    # Attempt to append the ballots
-    try:
-      self.b.append(bb)
-    except RuntimeError, msg:
-      wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
-    else:
-      self.Log("Appended %d ballots from file %s." %\
-               (bb.nBallots, os.path.basename(bb.fName)))
-
-    self.panel.NeedToSaveBallots = True
-    self.panel.UpdatePanel()
 
 ##################################################################
 
@@ -724,106 +649,6 @@ class CandidatesDialog(wx.Dialog):
 
   def __init__(self, parent, b):
     wx.Dialog.__init__(self, parent, -1, "Candidates")
-
-    self.b = b
-
-    # Explanation
-    txt = wx.StaticText(self, -1, """\
-Enter the candidates' names one by one.  To remove a candidate
-whose name has already been entered, double click on the candidate's
-name below.""")
-
-    # Candidate entry
-    candidateL = wx.StaticText(self, -1, "Candidate to add:")
-    self.candidateC = wx.TextCtrl(self, -1, "", style=wx.TE_PROCESS_ENTER)
-    self.Bind(wx.EVT_TEXT_ENTER, self.OnEnter, self.candidateC)
-    candidateB = wx.Button(self, -1, "Add")
-    self.Bind(wx.EVT_BUTTON, self.OnAdd, candidateB)
-
-    # Candidate list
-    listL = wx.StaticText(self, -1, "Candidates:")
-    self.listC = wx.ListBox(self, -1, choices=self.b.names, size=(-1,100))
-    self.Bind(wx.EVT_LISTBOX_DCLICK, self.OnListDClick, self.listC)
-    blank = wx.StaticText(self, -1, "")
-
-    # Buttons
-    ok = wx.Button(self, wx.ID_OK)
-    self.Bind(wx.EVT_BUTTON, self.OnOK, ok)
-    cancel = wx.Button(self, wx.ID_CANCEL)
-
-    # Sizers
-    sizer = wx.BoxSizer(wx.VERTICAL)
-    sizer.Add(txt, 0, wx.ALL, 5)
-    sizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, 5)
-
-    fgs = wx.FlexGridSizer(2, 3, 5, 5)
-    fgs.Add(candidateL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-    fgs.Add(self.candidateC, 0, wx.EXPAND)
-    fgs.Add(candidateB, 0)
-    fgs.Add(listL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
-    fgs.Add(self.listC, 0, wx.EXPAND)
-    fgs.Add(blank, 0)
-    fgs.AddGrowableCol(1)
-
-    sizer.Add(fgs, 0, wx.EXPAND|wx.ALL, 5)
-    bs = wx.StdDialogButtonSizer()
-    bs.AddButton(ok)
-    bs.AddButton(cancel)
-    bs.Realize()
-    sizer.Add(bs, 0, wx.EXPAND|wx.ALL, 5)
-
-    self.SetSizer(sizer)
-    sizer.Fit(self)
-
-  ###
-
-  def OnOK(self, event):
-    # Check to see if name is entered and not added
-    name = self.candidateC.GetValue().strip()
-    if name == "":
-      event.Skip()
-    else:
-      wx.MessageBox("Name entered but not added.  Please hit the 'Add' "
-                    "button or clear the name in the text box to continue.",
-                    "Message", wx.OK|wx.ICON_INFORMATION)
-
-  ###
-
-  def OnEnter(self, event):
-    self.OnAdd(event)
-    
-  ###
-
-  def OnAdd(self, event):
-    # Get the name in the text box
-    name = self.candidateC.GetValue().strip()
-    # Add the name to the ballots instance and update the list control
-    if name not in self.b.names:
-      self.b.names.append(name)
-      self.b.nCand = len(self.b.names)
-      self.listC.Set(self.b.names)
-    else:
-      wx.MessageBox("Can't have two candidates with the same name.",
-                    "Error", wx.OK|wx.ICON_ERROR)
-    # Clear the text box to allow user to enter another name
-    self.candidateC.Clear()
-    self.candidateC.SetFocus()
-    
-  ###
-
-  def OnListDClick(self, event):
-    # Remove the candidate from the ballots instance and update the control
-    c = self.listC.GetSelection()
-    self.b.names.pop(c)
-    self.b.nCand = len(self.b.names)
-    self.listC.Set(self.b.names)
-
-##################################################################
-
-class ProjectsDialog(wx.Dialog):
-
-  def __init__(self, parent, b):
-    wx.Dialog.__init__(self, parent, -1, "Projects")
 
     self.b = b
 
