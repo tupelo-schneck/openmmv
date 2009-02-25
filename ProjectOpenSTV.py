@@ -19,6 +19,7 @@ import wx.html
 import os
 import sys
 import warnings
+import pdb
 
 import version
 import OpenSTV
@@ -45,7 +46,46 @@ class MyBFEFrame(wx.Frame):
     icon = wx.Icon(fn, wx.BITMAP_TYPE_ICO)
     self.SetIcon(icon)
 
-    self.EditBallotFile(mode, parent)
+    self.LoadBallotFile(mode, parent)
+
+  ###
+  
+  def LoadBallotFile(self, mode, parent):
+    if mode == "new":
+
+      # Create an empty ballots class instance
+      self.b = BltBallots()
+
+      # Get the candidate names from the user
+      dlg = BFE.CandidatesDialog(parent, self.b)
+      dlg.Center()
+      if dlg.ShowModal() != wx.ID_OK:
+        dlg.Destroy()
+        self.Destroy()
+        return
+      dlg.Destroy()
+        
+    # Edit an existing ballot file
+    elif mode == "old":
+      dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
+                          style=wx.OPEN|wx.CHANGE_DIR)
+      if dlg.ShowModal() != wx.ID_OK:
+        dlg.Destroy()
+        self.Destroy()
+        return
+      fName = dlg.GetPath()
+      dlg.Destroy()
+
+      # Open the file
+      try:
+        self.b = Ballots.loadUnknown(fName)
+      except RuntimeError, msg:
+        wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
+        self.Destroy()
+        return
+
+    else:
+      assert(0)
 
     # Set the window title to include the filename
     title = "%s - %s" % (os.path.basename(self.b.fName),
@@ -82,45 +122,6 @@ class MyBFEFrame(wx.Frame):
     self.SetSizer(sizer)
     sizer.Fit(self)
     sizer.SetSizeHints(self)
-
-  ###
-  
-  def EditBallotFile(self, mode, parent):
-    if mode == "new":
-
-      # Create an empty ballots class instance
-      self.b = BltBallots()
-
-      # Get the candidate names from the user
-      dlg = BFE.CandidatesDialog(parent, self.b)
-      dlg.Center()
-      if dlg.ShowModal() != wx.ID_OK:
-        dlg.Destroy()
-        self.Destroy()
-        return
-      dlg.Destroy()
-        
-    # Edit an existing ballot file
-    elif mode == "old":
-      dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
-                          style=wx.OPEN|wx.CHANGE_DIR)
-      if dlg.ShowModal() != wx.ID_OK:
-        dlg.Destroy()
-        self.Destroy()
-        return
-      fName = dlg.GetPath()
-      dlg.Destroy()
-
-      # Open the file
-      try:
-        self.b = Ballots.loadUnknown(fName)
-      except RuntimeError, msg:
-        wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
-        self.Destroy()
-        return
-
-    else:
-      assert(0)
 
   def Log(self, txt):
 
@@ -315,11 +316,25 @@ class MyBFEFrame(wx.Frame):
 ####################
 
 class PBFEFrame(BFE.BFEFrame):
-  def EditBallotFile(self, mode, parent):
-    if mode == "new":
 
-      # Create an empty ballots class instance
-      self.b = ProjectBallots()
+  def __init__(self, parent, home, mode):
+    wx.Frame.__init__(self, parent, -1, "Ballot File Editor")
+
+    self.MakeMenu()
+    self.Bind(wx.EVT_CLOSE, self.OnCloseWindow)
+    self.logfName = ""
+
+    fn = os.path.join(home, "Icons", "blt.ico")
+    icon = wx.Icon(fn, wx.BITMAP_TYPE_ICO)
+    self.SetIcon(icon)
+
+    self.LoadBallotFile(mode, parent)
+    
+  def LoadBallotFile(self, mode, parent):
+    # Create an empty ballots class instance
+    self.b = ProjectBallots()
+    
+    if mode == "new":
 
       # Get the projects info from the user
       dlg = BFE.ProjectDialog(parent, self.b)
@@ -332,7 +347,7 @@ class PBFEFrame(BFE.BFEFrame):
         
     # Edit an existing ballot file
     elif mode == "old":
-      dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
+      dlg = wx.FileDialog(self, "Select Project Ballot File", os.getcwd(), "",
                           style=wx.OPEN|wx.CHANGE_DIR)
       if dlg.ShowModal() != wx.ID_OK:
         dlg.Destroy()
@@ -343,7 +358,7 @@ class PBFEFrame(BFE.BFEFrame):
 
       # Open the file
       try:
-        self.b = ProjectBallots.load(fName)
+        self.b.load(fName)
       except RuntimeError, msg:
         wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
         self.Destroy()
@@ -352,12 +367,48 @@ class PBFEFrame(BFE.BFEFrame):
     else:
       assert(0)
 
+    # Set the window title to include the filename
+    title = "%s - %s" % (os.path.basename(self.b.fName),
+                         "Project Ballot File Editor")
+    self.SetTitle(title)
+
+    # Create a notebook with an editing page and a log page
+    nb = wx.Notebook(self, -1)
+
+    self.panel = BFE.BallotsPanel(nb, self.b)
+    nb.AddPage(self.panel, "Ballots")
+
+    self.logN = 1 # counter for display purposes
+    self.log = wx.TextCtrl(nb, -1,
+                           style=wx.TE_MULTILINE|wx.TE_READONLY|\
+                           wx.TE_WORDWRAP|wx.FIXED)
+    self.log.SetMaxLength(0)
+    nb.AddPage(self.log, "Log")
+
+    # Initialize
+    if mode == "new":
+      self.panel.NeedToSaveBallots = True
+      self.Log("Created a new ballot file.")
+    elif mode == "old":
+      self.panel.NeedToSaveBallots = False
+      self.Log("Loaded %d ballots from file %s." %\
+               (self.b.nBallots, os.path.basename(self.b.fName)))
+    else:
+      assert(0)
+
+    # Set up the sizer
+    sizer = wx.BoxSizer()
+    sizer.Add(nb, 1, wx.EXPAND, 0)
+    self.SetSizer(sizer)
+    sizer.Fit(self)
+    sizer.SetSizeHints(self)
+
   ###
 
   def OnAppendBF(self, event):
 
     # Get the filename of the ballots to be appended
-    dlg = wx.FileDialog(self, "Select Ballot File", os.getcwd(), "",
+    dlg = wx.FileDialog(self, "Select Project Ballot File", os.getcwd(), "",
                         style=wx.OPEN|wx.CHANGE_DIR)
     if dlg.ShowModal() != wx.ID_OK:
       dlg.Destroy()
@@ -367,7 +418,8 @@ class PBFEFrame(BFE.BFEFrame):
 
     # Attempt to load the ballots
     try:
-      bb = ProjectBallots.loadUnknown(fName)
+      bb = ProjectBallots()
+      bb.load(fName)
     except RuntimeError, msg:
       wx.MessageBox(str(msg), "Error", wx.OK|wx.ICON_ERROR)
       return
@@ -497,7 +549,7 @@ BFE.ProjectsDialog = ProjectsDialog
 class MyFrame(wx.Frame):
 
   def __init__(self, parent):
-    wx.Frame.__init__(self, parent, -1, "OpenSTV with Projects", size=(900,600))
+    wx.Frame.__init__(self, parent, -1, "OpenSTV (with MMV support)", size=(900,600))
 
     warnings.showwarning = self.catchWarnings
 
@@ -524,8 +576,8 @@ class MyFrame(wx.Frame):
     # add the console as the first page
     self.notebook.AddPage(self.console, "Console")
     self.output = OpenSTV.Output(self.notebook)
-    sys.stdout = self.output
-    sys.stderr = self.output
+    #sys.stdout = self.output
+    #sys.stderr = self.output
 
     self.introText = """\
 OpenSTV Copyright (C) 2003-2009 Jeffrey O'Neill
@@ -544,7 +596,7 @@ to www.OpenSTV.org, or send an email to OpenSTV@googlegroups.com.
 """
     self.console.AppendText(self.introText)
 
-    os.chdir(wx.StandardPaths.Get().GetDocumentsDir())
+    #os.chdir(wx.StandardPaths.Get().GetDocumentsDir())
 
   ###
     
