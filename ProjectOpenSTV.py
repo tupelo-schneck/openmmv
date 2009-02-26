@@ -19,7 +19,6 @@ import wx.html
 import os
 import sys
 import warnings
-import pdb
 
 import version
 import OpenSTV
@@ -337,7 +336,7 @@ class PBFEFrame(BFE.BFEFrame):
     if mode == "new":
 
       # Get the projects info from the user
-      dlg = BFE.ProjectDialog(parent, self.b)
+      dlg = BFE.ProjectsDialog(parent, self.b)
       dlg.Center()
       if dlg.ShowModal() != wx.ID_OK:
         dlg.Destroy()
@@ -375,7 +374,7 @@ class PBFEFrame(BFE.BFEFrame):
     # Create a notebook with an editing page and a log page
     nb = wx.Notebook(self, -1)
 
-    self.panel = BFE.BallotsPanel(nb, self.b)
+    self.panel = BFE.ProjectBallotsPanel(nb, self.b)
     nb.AddPage(self.panel, "Ballots")
 
     self.logN = 1 # counter for display purposes
@@ -438,6 +437,189 @@ class PBFEFrame(BFE.BFEFrame):
 
 ####################
 
+class ProjectBallotsPanel(BFE.BallotsPanel):
+
+  def __init__(self, parent, b):
+    wx.Panel.__init__(self, parent, -1)
+
+    self.NeedToSaveBallots = False
+    self.NeedToSaveLog = False
+    self.b = b
+    self.i = 0   # The number of the ballot being displayed
+    if self.b.raw == []:
+      self.b.raw.append([])
+      self.b.nBallots = 1
+
+    # Information box
+    informationBox = wx.StaticBox(self, -1, "Information")
+    fNameL = wx.StaticText(self, -1, "Filename:")
+    self.fNameC = wx.StaticText(self, -1, os.path.basename(self.b.fName))
+    nBallotsL = wx.StaticText(self, -1, "No. of ballots:")
+    self.nBallotsC = wx.StaticText(self, -1, "%d" % self.b.nBallots)
+    nSeatsL = wx.StaticText(self, -1, "No. of seats:")
+    nSeatsC = wx.StaticText(self, -1, "%d" % self.b.nSeats)
+    nCandidatesL = wx.StaticText(self, -1, "No. of projects:")
+    nCandidatesC = wx.StaticText(self, -1, "%d" % self.b.nCand)
+    titleL = wx.StaticText(self, -1, "Title:")
+    title = ""
+    if vars(self.b).has_key("title"): title = self.b.title
+    titleC = wx.TextCtrl(self, -1, title)
+    self.Bind(wx.EVT_TEXT, self.OnTitle, titleC)
+
+    # Rankings box
+    rankingsBox = wx.StaticBox(self, -1, "Rankings")
+    txt = """\
+Click on a project's name to assign that project the next
+available ranking, and double-click on a project's name to
+remove the ranking and reorder the remaining projects."""
+    rankingsHelp = wx.StaticText(self, -1, txt)
+
+    # Navigation box
+    navigationBox = wx.StaticBox(self, -1, "Navigation")
+    first = wx.Button(self, -1, "|<", style=wx.BU_EXACTFIT)
+    prev = wx.Button(self, -1, "<", style=wx.BU_EXACTFIT)
+    next = wx.Button(self, -1, ">", style=wx.BU_EXACTFIT)
+    last = wx.Button(self, -1, ">|", style=wx.BU_EXACTFIT)
+    self.spin = wx.SpinCtrl(self, -1, size=(60, -1))
+    self.spin.SetRange(1, self.b.nBallots)
+    self.spin.SetValue(1)
+    go = wx.Button(self, -1, "Go", style=wx.BU_EXACTFIT)
+    
+    self.Bind(wx.EVT_BUTTON, self.OnNav, first)
+    self.Bind(wx.EVT_BUTTON, self.OnNav, prev)
+    self.Bind(wx.EVT_BUTTON, self.OnNav, next)
+    self.Bind(wx.EVT_BUTTON, self.OnNav, last)
+    self.Bind(wx.EVT_BUTTON, self.OnNav, go)
+
+    # Operations box
+    operationsBox = wx.StaticBox(self, -1, "Operations")
+    clear = wx.Button(self, -1, "Clear This Ballot")
+    delete = wx.Button(self, -1, "Delete This Ballot")
+    append = wx.Button(self, -1, "Append New Ballot")
+    exitBFE = wx.Button(self, -1, "Exit")
+
+    self.Bind(wx.EVT_BUTTON, self.OnClear, clear)
+    self.Bind(wx.EVT_BUTTON, self.OnDelete, delete)
+    self.Bind(wx.EVT_BUTTON, self.OnAppend, append)
+    self.Bind(wx.EVT_BUTTON, self.OnExit, exitBFE)
+
+    # Ballot box
+    self.ballotBox = wx.StaticBox(self, -1, "Ballot No. %d" % (self.i + 1))
+    self.ballotC = BFE.BallotCtrl(self, -1)
+    self.ballotC.InsertColumn(0, " R ", wx.LIST_FORMAT_RIGHT)
+    self.ballotC.InsertColumn(1, "Project")
+    self.ballotBox.SetLabel("Ballot No. %d" % (self.i+1))
+    for c, name in enumerate(self.b.names):
+      if c in self.b.raw[self.i]:
+        r = self.b.raw[self.i].index(c)
+        self.ballotC.InsertStringItem(c, str(r+1))
+      else:
+        self.ballotC.InsertStringItem(c, "")
+      self.ballotC.SetStringItem(c, 1, name)
+    self.ballotC.SetColumnWidth(0, wx.LIST_AUTOSIZE_USEHEADER)
+    w = self.ballotC.computeColumnWidth()
+    self.ballotC.SetColumnWidth(1, w)
+
+    self.Bind(wx.EVT_LIST_COL_BEGIN_DRAG, self.OnColBeginDrag, self.ballotC)
+    self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnListClick, self.ballotC)
+    self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnListDClick, self.ballotC)
+
+    # Sizers
+    sizer = wx.BoxSizer(wx.HORIZONTAL)
+    leftSizer = wx.BoxSizer(wx.VERTICAL)
+
+    # Information
+    informationSizer = wx.StaticBoxSizer(informationBox, wx.VERTICAL)
+    fgs = wx.FlexGridSizer(5, 2, 5, 5)
+    fgs.Add(fNameL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(self.fNameC, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(nBallotsL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(self.nBallotsC, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(nSeatsL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(nSeatsC, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(nCandidatesL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(nCandidatesC, 0, wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(titleL, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL)
+    fgs.Add(titleC, 1, wx.EXPAND|wx.ALL)
+    fgs.AddGrowableCol(1)
+    informationSizer.Add(fgs, 0, wx.EXPAND|wx.ALL, 5)
+    leftSizer.Add(informationSizer, 0, wx.EXPAND|wx.ALL, 5)
+
+    # Rankings
+    rankingsSizer = wx.StaticBoxSizer(rankingsBox, wx.VERTICAL)
+    rankingsSizer.Add(rankingsHelp, 0, wx.ALIGN_CENTER|wx.ALL, 5)
+    leftSizer.Add(rankingsSizer, 0, wx.EXPAND|wx.ALL, 5)
+
+    # Navigation
+    navigationSizer = wx.StaticBoxSizer(navigationBox, wx.VERTICAL)
+
+    hSizer = wx.BoxSizer(wx.HORIZONTAL)
+    hSizer.Add(first, 0, wx.ALIGN_CENTER|wx.ALL, 5)
+    hSizer.Add(prev, 0, wx.ALIGN_CENTER|wx.ALL, 5)
+    hSizer.Add(next, 0, wx.ALIGN_CENTER|wx.ALL, 5)
+    hSizer.Add(last, 0, wx.ALIGN_CENTER|wx.ALL, 5)
+    navigationSizer.Add(hSizer, 0, wx.ALIGN_CENTER, 0)
+
+    hSizer = wx.BoxSizer(wx.HORIZONTAL)
+    hSizer.Add(self.spin, 0, wx.ALIGN_CENTER|wx.ALL, 5)
+    hSizer.Add(go, 0, wx.ALIGN_CENTER|wx.ALL, 5)
+    navigationSizer.Add(hSizer, 0, wx.ALIGN_CENTER, 0)
+
+    leftSizer.Add(navigationSizer, 0, wx.EXPAND|wx.ALL, 5)
+
+    # Operations
+    operationsSizer = wx.StaticBoxSizer(operationsBox, wx.VERTICAL)
+    gs = wx.GridSizer(2, 2, 5, 5)
+    gs.Add(clear, 0, wx.EXPAND)
+    gs.Add(delete, 0, wx.EXPAND)
+    gs.Add(append, 0, wx.EXPAND)
+    gs.Add(exitBFE, 0, wx.EXPAND)
+    operationsSizer.Add(gs, 0, wx.ALIGN_CENTER|wx.ALL, 5)
+    leftSizer.Add(operationsSizer, 0, wx.EXPAND|wx.ALL, 5)
+
+    # Ballot
+    ballotSizer = wx.StaticBoxSizer(self.ballotBox, wx.VERTICAL)
+    ballotSizer.Add(self.ballotC, 1, wx.EXPAND|wx.ALL, 5)
+    # Need this ugly hack since wx.ListCtrl doesn't properly set its size
+    w = self.ballotC.GetColumnWidth(0) + self.ballotC.GetColumnWidth(1)\
+        + wx.SystemSettings_GetMetric(wx.SYS_VSCROLL_X) + 5
+    ballotSizer.SetItemMinSize(self.ballotC, (w, -1))
+
+    sizer.Add(leftSizer, 0, wx.EXPAND, 0)
+    sizer.Add(ballotSizer, 0, wx.EXPAND|wx.ALL, 5)
+    
+    self.SetSizer(sizer)
+    sizer.Fit(self)
+    
+  ###
+
+  def OnListClick(self, event):
+    c = event.m_itemIndex
+    name = self.b.names[c]
+    if c not in self.b.raw[self.i]:
+      self.b.raw[self.i].append(c)
+      rank = len(self.b.raw[self.i])
+      self.Log("Added project %s to ballot %d with rank %d." %
+                   (name, self.i+1, rank))
+      self.NeedToSaveBallots = True
+      self.NeedToSaveLog = True
+      self.UpdatePanel()
+
+  ###
+
+  def OnListDClick(self, event):
+    c = event.m_itemIndex
+    name = self.b.names[c]
+    if c in self.b.raw[self.i]:
+      self.b.raw[self.i].remove(c)
+      self.Log("Removed project %s from ballot %d." %
+                   (name, self.i+1))
+      self.NeedToSaveBallots = True
+      self.NeedToSaveLog = True
+      self.UpdatePanel()
+
+####################
+
 class ProjectsDialog(wx.Dialog):
 
   def __init__(self, parent, b):
@@ -447,19 +629,19 @@ class ProjectsDialog(wx.Dialog):
 
     # Explanation
     txt = wx.StaticText(self, -1, """\
-Enter the candidates' names one by one.  To remove a candidate
-whose name has already been entered, double click on the candidate's
-name below.""")
+Enter the projects' names and requested funding one by one.  To remove
+a project that has already been entered, double click on the
+project's name below.""")
 
     # Candidate entry
-    candidateL = wx.StaticText(self, -1, "Candidate to add:")
+    candidateL = wx.StaticText(self, -1, "Project to add:")
     self.candidateC = wx.TextCtrl(self, -1, "", style=wx.TE_PROCESS_ENTER)
     self.Bind(wx.EVT_TEXT_ENTER, self.OnEnter, self.candidateC)
     candidateB = wx.Button(self, -1, "Add")
     self.Bind(wx.EVT_BUTTON, self.OnAdd, candidateB)
 
     # Candidate list
-    listL = wx.StaticText(self, -1, "Candidates:")
+    listL = wx.StaticText(self, -1, "Projects:")
     self.listC = wx.ListBox(self, -1, choices=self.b.names, size=(-1,100))
     self.Bind(wx.EVT_LISTBOX_DCLICK, self.OnListDClick, self.listC)
     blank = wx.StaticText(self, -1, "")
@@ -542,6 +724,7 @@ name below.""")
 BFE.BFEFrame = MyBFEFrame
 BFE.PBFEFrame = PBFEFrame
 BFE.ProjectsDialog = ProjectsDialog
+BFE.ProjectBallotsPanel = ProjectBallotsPanel
 
 ##################################################################
 ### OpenSTV.py monkey patching ###
@@ -576,8 +759,8 @@ class MyFrame(wx.Frame):
     # add the console as the first page
     self.notebook.AddPage(self.console, "Console")
     self.output = OpenSTV.Output(self.notebook)
-    #sys.stdout = self.output
-    #sys.stderr = self.output
+    sys.stdout = self.output
+    sys.stderr = self.output
 
     self.introText = """\
 OpenSTV Copyright (C) 2003-2009 Jeffrey O'Neill
