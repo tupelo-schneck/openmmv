@@ -374,7 +374,7 @@ class ProjectElection(RecursiveSTV):
                     tree[newKey]["n"] += tree[key]["n"]
                     treeToMerge = tree[key]
                     del tree[key]
-                    self.mergeTree(treeToMerge,tree)
+                    self.mergeTree(treeToMerge,tree[newKey])
                 else:
                     tree[newKey] = tree[key]
                     del tree[key]
@@ -430,7 +430,7 @@ class ProjectElection(RecursiveSTV):
                     if nextamount < bamount: self.count[self.R][c][bamount] = 0
                     else:
                         self.count[self.R][c][bamount] = self.count[self.R][c][nextamount] * (bamount - prior) / (nextamount - prior)
-                        self.count[self.R][c][nextamount] -= self.count[self.R][c][amount]
+                        self.count[self.R][c][nextamount] -= self.count[self.R][c][bamount]
 
                 contrib = {}
                 contribTot = 0
