@@ -1,0 +1,239 @@
+  onlySingleWinner = False # True if method can only be used for single-
+                           # winner elections, e.g., Condorcet
+  orderDependent = False   # True if method outcome depends on the order of
+                           # the ballots, e.g., Cambridge
+
+
+  iterative = True
+  threshMethod = True # methods may override this
+
+
+
+
+__init__
+    self.numSeats = ballots.numSeats
+    self.title = ballots.title
+    self.date = ballots.date
+    self.withdrawn = ballots.withdrawn[:]
+
+    # Defaults for options
+    self.debug = False
+    self.strongTieBreakMethod = "random"
+
+    # These are the ballots that are read from the disk, and this ballots
+    # instance will not be changed.  In Election.preCount, a cleaned ballots
+    # instance, self.b, is created that is actually used in counting the
+    # votes.  Cleaning includes removing withdrawn candidates, empty ballots,
+    # and repeated rankings of a candidate.  The cleaned ballots will also
+    # be "packed" for most methods but will be unpacked for order dependent
+    # methods, such as Cambridge STV.
+    self.dirtyBallots = ballots
+
+    # This is used to specify options for the GUI in OpenSTV.  The available
+    # options are defined in plugins.py.
+    self.UIoptions = []
+
+    # This is used for generating reports and will be set to a string
+    # that describes the method's options.  If the method has no options
+    # then it will be the empty string.
+    self.optionsMsg = ""
+
+    # Specify the method for breaking weak ties.
+    #    backward -- present round backwards
+    #    forward -- present round, first round forwards
+    #    random  -- random choice
+    self.weakTieBreakMethod = "backward"
+
+    self.stopCond = ["Know Winners", "N"]
+
+    self.threshName = ["Droop", "Dynamic", "Fractional"]
+    self.prec = 6
+    self.surplusLimit = 1	# lsb, not 1.0
+
+
+runElection:
+  preCount
+  countBallots
+  postCount
+
+Election.postCount: pass
+
+
+Election.checkMinRequirements:  (called by preCount)
+
+
+
+Election.preCount:
+    self.nRandom = 0           # Number of random choices made
+    self.p = 10**self.prec     # Scale factor for computations
+
+    # Withdraw candidates and clean ballots
+    self.b = self.dirtyBallots.copy()
+    self.b.cleanBallots(self.withdrawn, True, True)
+    if self.orderDependent:
+      self.b.unpack()
+      assert(self.b.numBallots == self.b.numWeightedBallots)
+    else:
+      self.b.pack()
+
+    # Check for sufficient candidates and ballots
+    self.checkMinRequirements()
+Iterative.preCount:
+    self.msg = []
+    self.count = []
+    self.exhausted = []
+    # Winners are further broken into two categories.
+    self.winnersEven = [] # winners who have had their surplus transferred
+    self.winnersOver = [] # winners who still have a surplus
+
+    # There is probably a better way to keep track of what happens at
+    # each round.
+    # action[r]("surplus|eliminate", [c1, c2, ...]) describes what happened
+    # at round r.  Multiple candidates are either eliminated or have
+    # their surpluses transferred
+    # Nothing happens in the first round
+    self.action = []
+
+    # Keep track of what happens to candidates.
+    self.wonAtRound = [None] * self.b.numCandidates
+    self.lostAtRound = [None] * self.b.numCandidates
+
+    self.losers = []
+    self.purgatory = range(self.b.numCandidates)
+    self.winners = []
+STV.preCount:
+    self.firstEliminationRound = True
+
+    self.R = 0           # current round
+    self.nRounds = 0     # total number of rounds
+    self.count = []      # count[r][c] is candidate c's votes at round r
+    self.exhausted = []  # exhausted[r] is number of exhausted votes
+    self.surplus = []    # surplus[r] is number of surplus votes
+    self.thresh = []     # thresh[r] is the winning threshold
+    self.msg = []        # msg[r] contains text describing round r
+
+    # votes[c] stores the indices of all votes for candidate c.
+    self.votes = []
+    for c in range(self.b.numCandidates):
+      self.votes.append([])
+RecursiveSTV.preCount:
+    self.f = []
+
+RecursiveSTV.countBallots (overrides STV)
+  def countBallots(self):
+    "Count the ballots using Meek STV."
+
+    # Count first place votes
+    self.R = 0
+    self.allocateRound()
+    self.initializeTreeAndKeepValues()
+    self.updateCount()
+    self.msg[self.R] += "Count of first choices. "
+    desc = self.updateWinners()
+    self.msg[self.R] += desc
+    if self.debug: print self.generateTextResults(round=self.R)
+
+    while (not self.electionOver()):
+
+      self.R += 1
+      self.allocateRound()
+
+      (losers, descChoose) = self.chooseCandidatesToEliminate()
+      self.action[self.R] = ("eliminate", losers)
+      if losers != []:
+        descTrans = self.eliminateLosers(losers)
+        self.msg[self.R] += descTrans + descChoose
+        self.updateTree(self.tree)
+        self.copyKeepValues()
+        self.updateCount()
+      elif self.surplus[self.R-1] > 0:
+        self.msg[self.R] += "Count after transferring surplus votes. "
+        self.updateTree(self.tree)
+        desc = self.updateKeepValues()
+        self.msg[self.R] += desc
+        self.updateCount()
+      else:
+        assert(0)
+
+      desc = self.updateWinners()
+      self.msg[self.R] += desc
+      if self.debug: print self.generateTextResults(round=self.R)
+
+    self.msg[self.R] += self.updateCandidateStatus()
+    self.nRounds = self.R+1
+
+
+++allocateRound
+RecursiveSTV.initializeTreeAndKeepValues (simple, calls addBallotToTree)
+++updateCount
+++updateWinners
+while not STV.electionOver (simple)
+   STV+RecursiveSTV.allocateRound (simple)
+   RecursiveSTV overrides STV.chooseCandidatesToEliminate
+   1) RecursiveSTV.eliminateLosers (simple, calls Iterative.newLosers -> simple)
+      RecursiveSTV.updateTree (simple, calls addBallotToTree -> simple)
+      RecursiveSTV.copyKeepValues (simple)
+   2) RecursiveSTV.updateTree (simple, calls addBallotToTree)
+      RecursiveSTV.updateKeepValues (simple)
+   RecursiveSTV.updateCounts
+           calls treeCount, STV.updateThresh -> simple
+   STV.updateWinners
+STV.updateCandidateStatus 
+       calls Iterative.newLosers, .breakWeakTie, .newWinners
+          breakWeakTie calls breakStrongTie, findTiedCand
+
+RecursiveSTV.chooseCandidatesToEliminate(self):
+    "Eliminate any losing candidates."
+    
+    desc = ""
+
+    losers = self.getLosers()
+    if self.surplus[self.R-1] < self.surplusLimit and losers == []:
+      (c, desc) = self.breakWeakTie(self.R-1, self.purgatory, "fewest",
+                                    "candidates to eliminate")
+      losers = [c]
+
+    # Special case to prevent infinite loops caused by fixed precision
+    if (losers == [] and
+        self.R > 1 and
+        self.count[self.R-1] == self.count[self.R-2] and
+        self.f[self.R-1] == self.f[self.R-2]):
+      desc = "Candidates tied within precision of computations. "
+      (c, desc2) = self.breakWeakTie(self.R-1, self.purgatory, "fewest",
+                                     "candidates to eliminate")
+      losers = [c]
+      desc += desc2
+
+    return losers, desc
+    
+
+
+
+class Election(object):
+  def displayValue(self, value):
+  def findTiedCand(self, cList, mostfewest, values):
+  def breakStrongTie(self, tiedC):
+
+class Iterative(Election):
+  def breakWeakTie(self, R, cList, mostfewest, what=""):
+  def newWinners(self, winners, status="over"):
+  def newLosers(self, losers):
+
+class STV(Iterative):
+  def allocateRound(self):
+  def updateThresh(self):
+  def updateWinners(self):
+  def getLosers(self, ppp = None):
+  def electionOver(self):
+  def updateCandidateStatus(self):
+
+class RecursiveSTV(STV):
+  def allocateRound(self):
+  def initializeTreeAndKeepValues(self):
+  def addBallotToTree(self, tree, ballotIndex, ballot=""):
+  def updateTree(self, tree):
+  def updateCount(self):
+  def chooseCandidatesToEliminate(self):
+  def eliminateLosers(self, losers):
+  def copyKeepValues(self):
+  def updateKeepValues(self):
