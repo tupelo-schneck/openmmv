@@ -47,25 +47,40 @@ class OldAndBusted(NonIterative,MethodPlugin):
         self.nRounds = 1
 
         exhaustedCount = 0
+        exhaustedAmount = 0
         
         for i in xrange(self.b.numWeightedBallots):
             weight, cands, amts = self.b.getWeightedProjectBallot(i)
             sofar = 0
+            finished = False
+            candsSeen = []
             for c,a in itertools.izip(cands,amts):
+                seen = c in candsSeen
+                if not seen: candsSeen.append(c)
                 if sofar + a <= self.b.numSeats:
-                    self.count[c] += self.p * weight
+                    if not seen:
+                        self.count[c] += self.p * weight
                     self.amount[c] += self.p * weight * a
                 elif sofar + self.b.minimum[c] <= self.b.numSeats:
+                    finished = True
                     a = self.b.numSeats - sofar
-                    self.count[c] += self.p * weight
+                    if not seen:
+                        self.count[c] += self.p * weight
                     self.amount[c] += self.p * weight * a
                 else:
+                    finished = True
                     continue
                 sofar += a
                 if sofar >= self.b.numSeats: break
             if sofar < self.b.numSeats:
-                exhaustedCount += 1
+                if not finished:
+                    exhaustedCount += 1
+                    exhaustedAmount += weight * (self.b.numSeats - sofar)
                 self.exhausted += weight * (self.b.numSeats - sofar)
+
+        if exhaustedCount > 0:
+            self.msg += "%d ballots *intentionally* exhausted for a total of %d.\n" % \
+                        (exhaustedCount, exhaustedAmount)
 
         useable = self.p * self.b.numSeats
         candsWithCounts = [ (count, cand) for (cand, count) in enumerate(self.count) ]
@@ -94,15 +109,20 @@ class OldAndBusted(NonIterative,MethodPlugin):
                 done = True
             for c in tiedCands:
                 self.winners.append(c)
+                fullAmount = self.p * self.amount[c] / self.count[c]
                 winningAmount = multiplier * self.amount[c] / self.count[c]
                 useable -= winningAmount
                 self.msg += "Candidate %s wins with %s%s.\n" % (self.b.names[c], \
-                                                                self.displayValue(winningAmount),\
-                                                                " (truncated)" if done else "")
+                            self.displayValue(winningAmount),\
+                            (" (truncated from %s)" % self.displayValue(fullAmount)) \
+                                                                if done else "")
             if exhaustedCount==self.count[tiedCands[0]]:
+                fullAmount = self.p * self.exhausted / exhaustedCount
                 winningAmount = multiplier * self.exhausted / exhaustedCount
                 useable -= winningAmount
                 winningAmount /= self.p
                 self.msg += "Exhaustion removes %s%s.\n" % (self.b.names[c], \
-                                                                self.displayValue(winningAmount),\
-                                                                " (truncated)" if done else "")
+                            self.displayValue(winningAmount),\
+                            (" (truncated from %s)" % self.displayValue(fullAmount)) \
+                                                                if done else "")
+                
