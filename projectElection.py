@@ -8,9 +8,16 @@
 # changes: if a share is $8, each supporter gives 50% of the ballot to get the
 # project to $100; but 25% to get it to 50 and 25% to get it from 50 to 100.
 
+# New: split preferences.  Maybe we give $10 to A at preference 1, then $10 to B,
+# then $10 more to A at preference 3 (for a total of $20).  The amount shown on the
+# ballot will be $10 (that is, the amount given, not $20, the total desired at that
+# point, as I had previously imagined).
+
+# TODO: how we choose project to be eliminated
 # TODO: epsilons & fudge factors --- including surplusLimit from OpenSTV
-# TODO: ballot priors
 # TODO: ties
+
+
 
 import itertools
 
@@ -26,7 +33,7 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
     htmlBody = """
 <p>Description goes here.</p>
 """
-  
+
     htmlHelp = (MethodPlugin.htmlBegin % (longMethodName, longMethodName)) +\
                htmlBody + MethodPlugin.htmlEnd
 
@@ -49,22 +56,29 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
     numSeats = property(getNumSeats,setNumSeats)
 
 ###
-        
+
     def preCount(self):
         """Called at start of election."""
         RecursiveSTV.preCount(self)
+        # Meek or Warren?
         self.meek = False
+        # Each ballot's share of the resources --- rounded down!
         self.share = self.p * self.b.numSeats / self.b.numBallots
+        # Largest portion of a project that one supporter can pay.
+        # Rounded up... that seems important.
         self.supportLimit = self.p
-        if self.b.supportObligation!=None and self.b.supportObligation>0:
+        if self.b.supportObligation!=None and self.b.supportObligation > 0:
             self.supportLimit = self.p * 100 / self.b.numBallots / self.b.supportObligation + 1
+        if self.supportLimit > self.p:
+            self.supportLimit = self.p
+        # Copy of project min and max at precision specified by self.p
         self.minimum = [self.p*self.b.minimum[c] for c in xrange(self.b.numCandidates)]
         self.maximum = [self.p*self.b.maximum[c] for c in xrange(self.b.numCandidates)]
+        # For these, see allocateRound
         self.winAmount = []
         self.eliminatedAbove = []
         self.resourcesWanted = []
         self.eliminableResources = []
-        self.resourcesWantedOfLeastNonLoser = None
         self.countDict = []
 
 ###
@@ -81,16 +95,26 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
     def allocateRound(self):
         """Called each iteration to set up data structures for the coming round (self.R)."""
         RecursiveSTV.allocateRound(self)
-        self.countDict.append([0] * self.b.numCandidates) # just used for printing results
+        # countDict : round -> candidate -> amount -> support
+        #     it shows how much of that part of the amount is supported
+        # f (factor) : round -> candidate -> amount -> fraction of the amount
+        #     to be given by each supporter 
+        self.countDict.append([0] * self.b.numCandidates)
         for c in xrange(self.b.numCandidates):
             self.countDict[self.R][c] = {}
             self.f[self.R][c] = {}
+        # winAmount : round -> candidate -> what amount has already won
+        # eliminatedAbove : round -> candidate -> highest amount not eliminated
         if self.R == 0:
             self.winAmount = [[0] * self.b.numCandidates]
             self.eliminatedAbove = [[self.maximum[p] for p in xrange(self.b.numCandidates)]]
         else:
             self.winAmount.append(self.winAmount[self.R-1][:])
             self.eliminatedAbove.append(self.eliminatedAbove[self.R-1][:])
+        # resourcesWanted : round -> candidate -> how many more resources the candidate
+        #     needs to be funded at the highest level suggested for it so far
+        # eliminableResources : round -> candidate -> how much would be obtained
+        #     by completely eliminating the candidate
         self.resourcesWanted.append([0] * self.b.numCandidates)
         self.eliminableResources.append([0] * self.b.numCandidates)
 
@@ -109,7 +133,9 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
     def updateCount(self):
         """Called at end of each iteration to set count, exhausted, thresh, surplus."""
 
-        # temporary round-to-round track of largest values given to funding levels
+        # maxKeep: temporary round-to-round track of largest fraction of amount
+        # actually given by any supporter.  This may be less than the calculated fraction f,
+        # in which case we can take a (sometimes massive) shortcut and truncate f to this.
         self.maxKeep = [0] * self.b.numCandidates
         for c in xrange(self.b.numCandidates):
             self.maxKeep[c] = {}
@@ -117,7 +143,7 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
 
         # compute thresh and surplus
         # Note: MMV doesn't actually use exhausted or thresh.
-        self.exhausted[self.R] = self.share*self.b.numBallots 
+        self.exhausted[self.R] = self.share*self.b.numBallots
         for c in self.winners + self.purgatory:
 		for v in self.countDict[self.R][c].values():
                    self.exhausted[self.R] -= v
@@ -151,10 +177,10 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
                 else:
                     break
                 prior = amount
-                
+
             if self.winAmount[self.R][c] == self.eliminatedAbove[self.R][c]:
                 winners.append(c)
-                        
+
         desc = self.newWinners(winners)
         if len(winners)>0:
             desc += "Winning amounts: " + self.b.joinList([str(int((self.winAmount[self.R][c]+self.p-1)/self.p)) for c in winners], convert="none") + ". "
@@ -167,14 +193,16 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
 
         if len(self.purgatory) <= 0:
             desc = "The election is over since all projects have won or been eliminated.  "
+            self.msg[self.R] += desc
             return True
 
         # possible shortcut...?
         spent = 0
         for amount in self.winAmount[self.R]:
             spent += amount
-        if spent == self.b.numSeats:
+        if spent >= self.share * self.b.numBallots:
             desc = "The election is over since all resources are spent. "
+            self.msg[self.R] += desc
             return True
 
         # Not done yet.
@@ -219,7 +247,7 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
         """If there are no sure losers, we'll need to pick somebody.
         We do this by looking at prior rounds to see which one was doing worse recently,
         if any.  If that doesn't work we call breakStrongTie and choose randomly.
-        In order to reuse the OpenSTV code which looks at self.count, we maneuver 
+        In order to reuse the OpenSTV code which looks at self.count, we maneuver
         self.resourcesWanted into self.count and look for the biggest.
         """
         savedcount = self.count
@@ -233,7 +261,7 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
         # a little bit.
         self.resourcesWantedOfLeastNonLoser = None
         return res
-        
+
 ###
 
     def eliminateLosers(self, losers):
@@ -250,23 +278,23 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
             if amounts[0] < self.minimum[losers[0]]:
                 amounts = [0]
         else:
-            # All in losers re sure losers; all but the last should be
+            # All in losers are sure losers; all but the last should be
             # fully eliminated, and the last should eliminate just enough
-            # that it can't want less than resourcesWantedOfLeastNonLoser
+            # that it can't want more than resourcesWantedOfLeastNonLoser
             amounts = []
             lastLoser = losers[len(losers)-1]
             allButLastEliminated = 0
             for l in losers[:-1]:
                 amounts.append(self.winAmount[R][l])
                 allButLastEliminated += self.eliminableResources[R][l]
-                      
+
             lastLoserAmount = self.eliminatedAbove[R][lastLoser] - \
                               (self.resourcesWanted[R][lastLoser] - self.surplus[R] - \
                                allButLastEliminated - self.resourcesWantedOfLeastNonLoser)
             if lastLoserAmount < self.minimum[lastLoser] or lastLoserAmount <= self.winAmount[R][lastLoser]:
                 lastLoserAmount = self.winAmount[R][lastLoser]
             else:
-                extraDesc = ", and " + self.b.names[lastLoser] + " (to " + str(int((lastLoserAmount+self.p-1)/self.p)) + "),"
+                extraDesc = ", and %s (to %s)," % (self.b.names[lastLoser],self.displayValue(lastLoserAmount))
             amounts.append(lastLoserAmount)
 
         totalLosers = []
@@ -292,6 +320,11 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
         """Called after an elimination."""
         for c in self.purgatory + self.winners:
             self.f[self.R][c] = self.f[self.R-1][c].copy()
+            for amount in self.countDict[self.R-1][c].keys():
+                if amount > self.winAmount[self.R-1][c]:
+                    continue
+                if self.f[self.R][c].get(amount,self.supportLimit) > self.maxKeep[c].get(amount,self.p):
+                    self.f[self.R][c][amount] = self.maxKeep[c][amount]
             # only keys for winners, so no need to look at eliminateds
 
 ###
@@ -318,7 +351,7 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
                 if r > 0: f += 1
                 self.f[self.R][c][amount] = f
                 prior = amount
-                list.append("%s(%s), %s" % (self.b.names[c], str(int((amount+self.p-1)/self.p)),
+                list.append("%s(%s), %s" % (self.b.names[c], self.displayValue(amount),
                                   self.displayValue(f)))
 
         if list != []:
@@ -328,29 +361,32 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
         return desc
 
 ###
-      
+
     def addBallotToTree(self, tree, ballotIndex, start=0):
         """Part of tree counting.  Adds one ballot to this tree."""
 
         weight, ballot, amounts = self.b.getWeightedProjectBallot(ballotIndex)
-        ballot = ballot[start:]
-        amounts = amounts[start:]
+        ballot = ballot
+        amounts = amounts
 
-        nextStart = start
-        for c, amount in itertools.izip(ballot,amounts):
-            nextStart += 1
-            # TODO: deal with ballot priors (ask Robert)
-            if c in self.purgatory + self.winners:
-                amount = amount * self.p
-                amount = min(amount,self.eliminatedAbove[self.R][c])
-                break
+        nextStart = start + 1
+        prior = [0] * self.b.numCandidates
+        for i, (c, bamount) in enumerate(itertools.izip(ballot,amounts)):
+            if i >= start:
+                nextStart = i + 1
+            if c in self.purgatory + self.winners and prior[c] < self.eliminatedAbove[self.R][c]:
+                if i >= start:
+                    amount = bamount * self.p + prior[c]
+                    amount = min(amount, self.eliminatedAbove[self.R][c])
+                    break
+                prior[c] += bamount * self.p
         else:
             # This will happen if the ballot contains only winning and losing
             # candidates.  The ballot index will not need to be transferred
             # again so it can be thrown away.
             return
 
-        key = (c,amount)
+        key = (c, amount, prior[c])
 
         # Create space if necessary.
         if not key in tree:
@@ -375,15 +411,15 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
             if key == "bi": continue
 
             self.updateTree(tree[key])
-            c, bamount = key
+            c, bamount, prior = key
             newAmount = self.eliminatedAbove[self.R][c]
             if bamount <= newAmount: continue
-            if newAmount < self.minimum[c]:
+            if newAmount < self.minimum[c] or newAmount <= prior:
                 treeToMerge = tree[key]
                 del tree[key]
                 self.mergeTree(treeToMerge,tree)
             else:
-                newKey = (c,newAmount)
+                newKey = (c,newAmount,prior)
                 if newKey in tree:
                     tree[newKey]["n"] += tree[key]["n"]
                     treeToMerge = tree[key]
@@ -396,7 +432,7 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
 ###
 
     def mergeTree(self,treeToMerge,tree):
-        """Merges two trees.  Doesn't deal with weight n."""
+        """Merges two trees.  Doesn't deal with weight n at top level."""
         tree["bi"] += treeToMerge["bi"]
         tree["i"] += treeToMerge["i"]
         for key in treeToMerge.keys():
@@ -410,7 +446,7 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
             else:
                 tree[key] = treeToMerge[key]
             del treeToMerge[key]
-    
+
 ###
 
     def treeCount(self, tree, remainder):
@@ -426,15 +462,17 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
             if key == "i": continue
             if key == "bi": continue
 
-            c, bamount = key
+            c, bamount, bprior = key
             if bamount > self.eliminatedAbove[self.R][c]: bamount = self.eliminatedAbove[self.R][c]
             rrr = remainder
-            if bamount >= self.minimum[c]: # not fully eliminated
+            if bamount >= self.minimum[c] and bamount > bprior: # not fully eliminated
+                # if we haven't seen this amount before, add it to f, if we've seen a larger amount
                 for amount in sorted(self.f[self.R][c].keys()):
                     if amount == bamount: break
                     if amount > bamount:
                         self.f[self.R][c][bamount] = self.f[self.R][c][amount]
                         break
+                # add this amount to countDict, taking from a larger amount in needed
                 if not bamount in self.countDict[self.R][c]:
                     nextamount = 0
                     prior = 0
@@ -443,22 +481,33 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
                         prior = nextamount
                     if nextamount < bamount: self.countDict[self.R][c][bamount] = 0
                     else:
-                        self.countDict[self.R][c][bamount] = self.countDict[self.R][c][nextamount] * (bamount - prior) / (nextamount - prior)
-                        self.countDict[self.R][c][nextamount] -= self.countDict[self.R][c][bamount]
+                        # round up how much the new smaller amount will get
+                        d,r = divmod(self.countDict[self.R][c][nextamount] * (bamount - prior),\
+                                         nextamount - prior)
+                        if r>0: d+=1
+                        self.countDict[self.R][c][bamount] = d
+                        self.countDict[self.R][c][nextamount] -= d
 
+                # now calculate contribution at every level between bprior and bamount
                 contrib = {}
                 contribTot = 0
-                prior = 0
+                prior = bprior
                 for amount in sorted(self.countDict[self.R][c].keys()):
+                    if amount <= bprior:
+                        continue
                     if amount > bamount:
                         break
                     f = self.f[self.R][c].get(amount, self.supportLimit)
-                    contrib[amount] = f * (amount - prior) / self.p
-                    contribTot += contrib[amount]
+                    # round up the contribution
+                    d, r = divmod(f * (amount - prior), self.p)
+                    if r > 0: d += 1
+                    contrib[amount] = d
+                    contribTot += d
                     prior = amount
 
+                # overContrib: we tried to contribute more than share (Meek) or remainder (Warren)
+                # shouldContrib: multiplier to each contribution to fix.  Rounded down.
                 overContrib = False
-                # TODO: some rounding issues to fix.
                 if self.meek:
                     if contribTot > self.share:
                         shouldContrib = self.share * self.p / contribTot
@@ -467,21 +516,34 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
                     if contribTot > rrr:
                         shouldContrib = rrr * self.p / contribTot
                         overContrib = True
-                prior = 0
+                prior = bprior
                 for amount in sorted(contrib.keys()):
                     if overContrib:
-                        f = shouldContrib * contrib[amount] / (amount - prior)
+                        # calculate maxKeep... round up
+                        f = (shouldContrib+1) * contrib[amount] / (amount - prior) + 1
+                        if f > self.p: f = self.p
                         if f > self.maxKeep[c].get(amount,0):
                             self.maxKeep[c][amount] = f
-                        newamount = rrr
+                        # calculate new contribution... round down, but see below
+                        newamount = shouldContrib * contrib[amount] / self.p
                     else:
                         self.maxKeep[c][amount] = self.p
                         newamount = contrib[amount]
-                        if self.meek: newamount = newamount * rrr / self.share
+                        if self.meek:
+                            # round up the Meek calculation
+                            newamount, r = divmod(newamount * rrr, self.share)
+                            if r > 0: newamount += 1
                     self.countDict[self.R][c][amount] += tree[key]["n"] * newamount
                     self.count[self.R][c] += tree[key]["n"] * newamount
                     rrr -= newamount
                     prior = amount
+                if overContrib and rrr > 0:
+                    # we rounded down new fixed contributions... but we had something left over
+                    # give it to the lowest contribution level
+                    amount = sorted(contrib.keys())[0]
+                    self.countDict[self.R][c][amount] += tree[key]["n"] * rrr
+                    self.count[self.R][c] += tree[key]["n"] * rrr
+                    rrr = 0
 
             # If ballot not used up and more candidates, keep going
             if rrr > 0:
