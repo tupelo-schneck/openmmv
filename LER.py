@@ -1,48 +1,87 @@
-from NonSTV import Condorcet
-from STV import MeekSTV
+from STV import *
+from MeekSTV import MeekSTV
+from Condorcet import Condorcet
+from plugins import MethodPlugin
 
-class LER(MeekSTV):
+class LERPlugin(MeekSTV,MethodPlugin):
+    methodName = "LER"
+    longMethodName = "Loring Ensemble Rule"
+    enabled = True
+
+    htmlBody = """
+<p>The Loring Ensemble Rule chooses a Condorcet winner
+and then uses STV (Meek, in this case) to find other winners.
+It could be used, for example, to elect a committee where
+a central chair is desired (the Condorcet winner) as well
+as more extreme representatives (the other winners).</p>
+
+<p>Using option LERa, the Condorcet winner still goes through
+the STV iterations (and thus takes votes from others), but
+can't be eliminated.  Using option LERb, the Condorcet winner
+is removed from the ballots before performing the STV
+calculation.  LERab takes both (the Condorcet winner is the
+LERb winner, then the Condorcet winner of the remaining
+is the LERa winner).  Note that although a LERa winner can't
+be eliminated, it could potentially still lose
+in the STV stage if enough
+other candidates are elected first!</p>
+"""
+
+    htmlHelp = (MethodPlugin.htmlBegin % (longMethodName, longMethodName)) +\
+        htmlBody + MethodPlugin.htmlEnd
+
     def __init__(self, b):
         MeekSTV.__init__(self, b)
-        self.method = "LER"
-        self.LERa = True
-        self.LERb = False
-        self.options = " with %s threshold" % string.join(self.threshName, "-")
-        self.options = ("a" if self.LERa else "") + ("b" if self.LERb else "") + self.options
+        self.LERoption = "LERa"
+        self.completion = "Schwartz Sequential Dropping"
+        self.createUIoptions(["completionMethod","LERoption"])
 
-    def setOptions(self, debug=None, strongTieBreakMethod=None, prec=None,
-                 threshName=None, LERa=None, LERb=None):
-        MeekSTV.setOptions(self, debug, strongTieBreakMethod, prec)
-        if LERa != None:
-            self.LERa = LERa
-        if LERb != None:
-            self.LERb = LERb
-        self.options = " with %s threshold" % string.join(self.threshName, "-")
-        self.options = ("a" if self.LERa else "") + ("b" if self.LERb else "") + self.options
+    def createUIoptions(self, list):
+        for option in list:
+            if option == "LERoption":
+                self.UIoptions.append( ("""
+label = wx.StaticText(self, -1, "LER option:")
+control = wx.Choice(self, -1, choices = ["LERa", "LERb", "LERab"])
+control.SetStringSelection("%s")""" % (self.LERoption),
+                                "GetStringSelection()",
+                                "LERoption") )
+                list.remove(option)
+        MethodPlugin.createUIoptions(self,list)
 
-    def initialize(self):
-        condorcetElection = Condorcet(self.b)
+    def preCount(self):
+        self.LERa = self.LERoption == "LERa" or self.LERoption == "LERab"
+        self.LERb = self.LERoption == "LERb" or self.LERoption == "LERab"
+        self.optionsMsg = "LER option: %s. \n" % self.LERoption
+        self.optionsMsg += "Using %s for the completion method." % self.completion
+        condorcetElection = Condorcet(self.dirtyBallots)
+        condorcetElection.completion = self.completion
+        condorcetElection.withdrawn = self.withdrawn[:]
         condorcetElection.runElection()
-        # handle withdrawals gracefully
-        self.b = condorcetElection.b
         self.LERaWinner = None
         self.LERbWinner = None
         if self.LERb:
-            self.LERbWinner = condorcetElection.winner
-            if self.LERa and self.b.nSeats > 1:
-                condorcetElection = Condorcet(self.b)
-                condorcetElection.withdrawn.append(self.LERbWinner)
-                condorcetElection.runElection()
-                self.LERaWinner = self.b.names.index(condorcetElection.b.names[condorcetElection.winner])
+            self.LERbWinner = condorcetElection.b.names[condorcetElection.winner]
+            if self.LERa and self.dirtyBallots.numSeats > 1:
+                condorcetElection2 = Condorcet(self.dirtyBallots)
+                condorcetElection2.completion = self.completion
+                condorcetElection2.withdrawn = self.withdrawn[:]
+                condorcetElection2.withdrawn.append(self.dirtyBallots.names.index(self.LERbWinner))
+                condorcetElection2.runElection()
+                self.LERaWinner = condorcetElection2.b.names[condorcetElection2.winner]
         else:
-            self.LERaWinner = condorcetElection.winner
-        MeekSTV.initialize(self)
+            self.LERaWinner = condorcetElection.b.names[condorcetElection.winner]
+        MeekSTV.preCount(self)
+        # adapt names to indices, now that withdrawals are finalized
+        if self.LERaWinner != None:
+            self.LERaWinner = self.b.names.index(self.LERaWinner)
         if self.LERbWinner != None:
+            print "evil %s in %s" % (self.LERbWinner , self.b.names)
+            self.LERbWinner = self.b.names.index(self.LERbWinner)
             # temporarily mark LERbWinner as a loser.
             self.purgatory.remove(self.LERbWinner)
             self.losers.append(self.LERbWinner)
             self.lostAtRound[self.LERbWinner] = 0
-            self.nSeats -= 1
+            self.numSeats -= 1
 
     def initializeTreeAndKeepValues(self):
         # This is just to get a message into the first round.
@@ -71,35 +110,12 @@ class LER(MeekSTV):
         except ValueError:
             pass
         return MeekSTV.getLosers(self,ppp)
-    
+
     def runElection(self):
         MeekSTV.runElection(self)
         if self.LERbWinner != None:
-            self.nSeats += 1
+            self.numSeats += 1
             self.losers.remove(self.LERbWinner)
             self.winners.append(self.LERbWinner)
             self.lostAtRound[self.LERbWinner] = None
             self.wonAtRound[self.LERbWinner] = 0
-
-    def generateTextResults(self, maxWidth=80, style="full"):
-        res = MeekSTV.generateTextResults(self)
-        if self.LERbWinner != None:
-            res += "\nLERb winner is " + self.b.names[self.LERbWinner] + ". "
-        if self.LERaWinner != None:
-            res += "\nLERa winner is " + self.b.names[self.LERaWinner] + ". "
-        return res
-
-class LERa(LER):
-    def __init__(self,b):
-        LER.__init__(self,b)
-        self.setOptions(LERa=True,LERb=False)
-
-class LERb(LER):
-    def __init__(self,b):
-        LER.__init__(self,b)
-        self.setOptions(LERa=False,LERb=True)
-
-class LERab(LER):
-    def __init__(self,b):
-        LER.__init__(self,b)
-        self.setOptions(LERa=True,LERb=True)
