@@ -40,7 +40,6 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
 
     def __init__(self, b):
         RecursiveSTV.__init__(self, b)
-        self.threshName=("Hare", "Static", "Fractional")
         if not isinstance(b,projectBallots.ProjectBallots):
             projectBallots.upgradeBallot(b)
         self.countingMethod = "Warren"
@@ -73,10 +72,26 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         MethodPlugin.createUIoptions(self,list)
 
 ###
+    def displayAmountValue(self,value):
+        "Format a value with specified precision."
+        if self.amountPrec == 0:
+            return str(value/self.p)
+        nfmt = "%d.%0" + str(self.amountPrec) + "d" # %d.%0_d
+        frac = value % self.p
+        p = 10**(self.prec - self.amountPrec)
+        f = frac/p
+        if frac%p >= p/2: f+=1
+        frac = f
+        return nfmt % (value/self.p, frac)
 
     def preCount(self):
         """Called at start of election."""
         RecursiveSTV.preCount(self)
+        self.threshName=("Hare", "Static", "Fractional")
+        # round amounts to the nearest integer
+        # Note: probably ballot should be checked to comply with this, if it is ever larger than self.p
+        self.amountPrec = 1 # show tenths
+        self.amountEpsilon = self.p
         # Meek or Warren?
         self.meek = self.countingMethod == "Meek"
         self.optionsMsg = "Counting method: %s." % self.countingMethod
@@ -182,6 +197,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         MMV adds winAmount, eliminatedAbove, resourcesWanted, and eliminableResources.
         """
         winners = []
+        winnersAmounts = {}
         desc = ""
         for c in self.purgatory:
             prior = 0
@@ -189,6 +205,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 if amount <= self.eliminatedAbove[self.R][c]:
                     if self.countDict[self.R][c][amount] >= amount - prior:
                         self.winAmount[self.R][c] = amount
+                        winnersAmounts[c] = amount
                     else:
                         self.resourcesWanted[self.R][c] += amount - prior - self.countDict[self.R][c][amount]
                         self.eliminableResources[self.R][c] += self.countDict[self.R][c][amount]
@@ -199,9 +216,18 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             if self.winAmount[self.R][c] == self.eliminatedAbove[self.R][c]:
                 winners.append(c)
 
-        desc = self.newWinners(winners)
-        if len(winners)>0:
-            desc += "Winning amounts: " + self.b.joinList([str(int((self.winAmount[self.R][c]+self.p-1)/self.p)) for c in winners], convert="none") + ". "
+        self.newWinners(winners) # ignore returned string
+        winners = winnersAmounts.keys()
+        if len(winners) == 0:
+            return ""
+        elif len(winners) == 1:
+            desc = "Candidate %s has reached the threshold and is elected. "\
+                % self.b.joinList(["%s(%s)" % (self.b.names[w],self.displayAmountValue(winnersAmounts[w])) \
+                                       for w in winners], convert="none")
+        else:
+            desc = "Candidates %s have reached the threshold and are elected. "\
+                % self.b.joinList(["%s(%s)" % (self.b.names[w],self.displayAmountValue(winnersAmounts[w])) \
+                                       for w in winners], convert="none")
         return desc
 
 ###
@@ -309,10 +335,11 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             lastLoserAmount = self.eliminatedAbove[R][lastLoser] - \
                               (self.resourcesWanted[R][lastLoser] - self.surplus[R] - \
                                allButLastEliminated - self.resourcesWantedOfLeastNonLoser)
+            lastLoserAmount = (lastLoserAmount / self.amountEpsilon) * self.amountEpsilon
             if lastLoserAmount < self.minimum[lastLoser] or lastLoserAmount <= self.winAmount[R][lastLoser]:
                 lastLoserAmount = self.winAmount[R][lastLoser]
             else:
-                extraDesc = ", and %s (to %s)," % (self.b.names[lastLoser],self.displayValue(lastLoserAmount))
+                extraDesc = ", and partially %s(>%s)," % (self.b.names[lastLoser],self.displayAmountValue(lastLoserAmount))
             amounts.append(lastLoserAmount)
 
         totalLosers = []
@@ -329,7 +356,9 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         self.newLosers(totalLosers)
         if len(totalLosers+winners) > 0 :
             desc = "Count after eliminating %s%s and transferring votes. "\
-               % (self.b.joinList(totalLosers+winners), extraDesc)
+               % (self.b.joinList(["%s(>%s)" % (self.b.names[c],\
+                                                    self.displayAmountValue(self.eliminatedAbove[self.R][c]))\
+                                       for c in totalLosers+winners], convert="none"),  extraDesc)
         return desc
 
 ###
@@ -338,10 +367,10 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         """Called after an elimination."""
         for c in self.purgatory + self.winners:
             self.f[self.R][c] = self.f[self.R-1][c].copy()
-            for amount in self.countDict[self.R-1][c].keys():
+            for amount in self.maxKeep[c].keys():
                 if amount > self.winAmount[self.R-1][c]:
                     continue
-                if self.f[self.R][c].get(amount,self.supportLimit) > self.maxKeep[c].get(amount,self.p):
+                if self.f[self.R][c].get(amount,self.supportLimit) > self.maxKeep[c][amount]:
                     self.f[self.R][c][amount] = self.maxKeep[c][amount]
             # only keys for winners, so no need to look at eliminateds
 
@@ -364,12 +393,13 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 oldf = self.f[self.R-1][c].get(amount,self.supportLimit)
                 if oldf > self.maxKeep[c].get(amount,self.p):
                     oldf = self.maxKeep[c][amount]
+                # round up calculation of new f
                 f, r = divmod(oldf * (amount - prior),
                       self.countDict[self.R-1][c][amount])
                 if r > 0: f += 1
                 self.f[self.R][c][amount] = f
                 prior = amount
-                list.append("%s(%s), %s" % (self.b.names[c], self.displayValue(amount),
+                list.append("%s(%s), %s" % (self.b.names[c], self.displayAmountValue(amount),
                                   self.displayValue(f)))
 
         if list != []:
@@ -490,7 +520,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                     if amount > bamount:
                         self.f[self.R][c][bamount] = self.f[self.R][c][amount]
                         break
-                # add this amount to countDict, taking from a larger amount in needed
+                # add this amount to countDict, taking from a larger amount if needed
                 if not bamount in self.countDict[self.R][c]:
                     nextamount = 0
                     prior = 0
@@ -535,14 +565,16 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 for amount in sorted(contrib.keys()):
                     if overContrib:
                         # calculate maxKeep... round up
-                        f = (shouldContrib+1) * contrib[amount] / (amount - prior) + 1
-                        if f > self.p: f = self.p
-                        if f > self.maxKeep[c].get(amount,0):
-                            self.maxKeep[c][amount] = f
+                        if amount <= self.winAmount[self.R][c]:
+                            f = (shouldContrib+1) * contrib[amount] / (amount - prior) + 1
+                            if f > self.p: f = self.p
+                            if f > self.maxKeep[c].get(amount,0):
+                                self.maxKeep[c][amount] = f
                         # calculate new contribution... round down, but see below
                         newamount = shouldContrib * contrib[amount] / self.p
                     else:
-                        self.maxKeep[c][amount] = self.p
+                        if amount <= self.winAmount[self.R][c]:
+                            self.maxKeep[c][amount] = self.p
                         newamount = contrib[amount]
                         if self.meek:
                             # round up the Meek calculation
