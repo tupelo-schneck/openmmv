@@ -44,7 +44,7 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
         if not isinstance(b,projectBallots.ProjectBallots):
             projectBallots.upgradeBallot(b)
         self.countingMethod = "Warren"
-        self.createUIoptions(["countingMethod"])
+        self.createUIoptions(["countingMethod","prec"])
 
 ###
 
