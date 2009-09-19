@@ -4,9 +4,9 @@ from projectElection import *
 from report import TextReport
 b = Ballots()
 loader = BltpBallotLoader()
-loader.load(b,"ballot_files/case_x.bltp")
+loader.load(b,"ballot_files/case_x2.bltp")
 e = ProjectElection(b)
-
+e.countingMethod = "Meek"
 
 def run():
   e.runElection()

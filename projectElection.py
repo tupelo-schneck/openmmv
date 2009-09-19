@@ -43,6 +43,8 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
         self.threshName=("Hare", "Static", "Fractional")
         if not isinstance(b,projectBallots.ProjectBallots):
             projectBallots.upgradeBallot(b)
+        self.countingMethod = "Warren"
+        self.createUIoptions(["countingMethod"])
 
 ###
 
@@ -55,13 +57,29 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
         self._numSeats = n
     numSeats = property(getNumSeats,setNumSeats)
 
+    def createUIoptions(self, list):
+        for option in list:
+            if option == "thresh0": list.remove(option)
+            elif option == "thresh1": list.remove(option)
+            elif option == "thresh2": list.remove(option)
+            elif option == "countingMethod":
+                self.UIoptions.append( ("""
+label = wx.StaticText(self, -1, "Counting Method:")
+control = wx.Choice(self, -1, choices = ["Meek", "Warren"])
+control.SetStringSelection("%s")""" % (self.countingMethod),
+                                "GetStringSelection()",
+                                "countingMethod") )
+                list.remove(option)
+        MethodPlugin.createUIoptions(self,list)
+
 ###
 
     def preCount(self):
         """Called at start of election."""
         RecursiveSTV.preCount(self)
         # Meek or Warren?
-        self.meek = False
+        self.meek = self.countingMethod == "Meek"
+        self.optionsMsg = "Counting method: %s." % self.countingMethod
         # Each ballot's share of the resources --- rounded down!
         self.share = self.p * self.b.numSeats / self.b.numBallots
         # Largest portion of a project that one supporter can pay.
@@ -507,15 +525,12 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
 
                 # overContrib: we tried to contribute more than share (Meek) or remainder (Warren)
                 # shouldContrib: multiplier to each contribution to fix.  Rounded down.
-                overContrib = False
                 if self.meek:
-                    if contribTot > self.share:
-                        shouldContrib = self.share * self.p / contribTot
-                        overContrib = True
+                    overContrib = contribTot > self.share
                 else:
-                    if contribTot > rrr:
-                        shouldContrib = rrr * self.p / contribTot
-                        overContrib = True
+                    overContrib = contribTot > rrr
+                if overContrib:
+                    shouldContrib = rrr * self.p / contribTot
                 prior = bprior
                 for amount in sorted(contrib.keys()):
                     if overContrib:
