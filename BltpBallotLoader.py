@@ -66,10 +66,13 @@ class BltpBallotLoader(BltBallotLoader,LoaderPlugin):
     for i in xrange(ballotList.numWeightedBallots):
       (w, cands, amts) = ballotList.getWeightedProjectBallot(i)
       changed = False
+      prior = [0] * numCandidates
       for j in xrange(len(cands)):
         if amts[j] is None or amts[j]<0:
-          amts[j] = ballotList.maximum[cands[j]]
+          amts[j] = ballotList.maximum[cands[j]] - prior[cands[j]]
+          if amts[j] < 0: amts[j] = 0
           changed = True
+        prior[cands[j]] += amts[j]
       if changed:
         ballotList.setWeightedProjectBallot(i,w,cands,amts)
       
