@@ -318,7 +318,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         if self.resourcesWantedOfLeastNonLoser == None:
             # We chose a loser, who wasn't a sure loser.  Just eliminate a little.
             assert(len(losers)==1)
-            amounts = [self.eliminatedAbove[R][losers[0]] - self.p]  # TODO: choose some epsilon
+            amounts = [self.eliminatedAbove[R][losers[0]] - self.amountEpsilon]
             if amounts[0] < self.minimum[losers[0]]:
                 amounts = [0]
         else:
