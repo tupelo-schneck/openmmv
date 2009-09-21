@@ -212,6 +212,8 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 else:
                     break
                 prior = amount
+            if prior == 0:
+                self.resourcesWanted[self.R][c] = self.minimum[c]
 
             if self.winAmount[self.R][c] == self.eliminatedAbove[self.R][c]:
                 winners.append(c)
