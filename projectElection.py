@@ -263,33 +263,29 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         correct funding level at which to eliminate greatest loser.
         In MMV we eliminate first the projects which need the most resources;
         unlike OpenSTV this isn't the same as projects with the least count.
-        Multiple exclusion is tricky with projects of differing amounts---care is required.
         """
         if ppp == None: ppp = self.purgatory
         R = self.R - 1
         ppp.sort(key=lambda a: -self.resourcesWanted[R][a])
         losers = []
 
-        self.eliminableResourcesOfLosers = 0
+        s = 0
+        self.resourcesWantedOfLeastNonLoser = 0
         for i in xrange(len(ppp)):
-            if len(ppp) > i+1:
-                self.resourcesWantedOfLeastNonLoser = self.resourcesWanted[R][ppp[i+1]]
+            c = ppp[i]
+            if i<len(ppp)-1:
+                nextResourcesWanted = self.resourcesWanted[R][ppp[i+1]]
             else:
-                self.resourcesWantedOfLeastNonLoser = 0 # TODO: make this some epsilon---in case we're willing to elect "close enough" projects
-            self.eliminableResourcesOfLosers += self.eliminableResources[R][ppp[i]]
-            # For everything so far, if you gave all eliminable resources from all the others,
+                nextResourcesWanted = 0 # TODO: make this some epsilon---in case we're willing to elect "close enough" projects
+            # If you gave c all eliminable resources from even worse projects (s),
             # and all of the surplus, would it still want more than the next project?
-            # If so you can eliminate all of them.
-            theyLose = True
-            for c in ppp[:i+1]:
-                if self.resourcesWanted[R][c] - (self.eliminableResourcesOfLosers - self.eliminableResources[R][c]) \
-                        - self.surplus[R] <= self.resourcesWantedOfLeastNonLoser:
-                    theyLose = False
-                    break
-            if theyLose:
-                return ppp[:i+1]
+            # If so c and all worse projects are sure losers.
+            if self.resourcesWanted[R][c] - s - self.surplus[R] > nextResourcesWanted:
+                losers = ppp[:i+1]
+                self.resourcesWantedOfLeastNonLoser = nextResourcesWanted
+            s += self.eliminableResources[R][c]
 
-        return []
+        return losers
 
 ###
 
@@ -328,18 +324,25 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             if amounts[0] < self.minimum[losers[0]]:
                 amounts = [0]
         else:
-            # All in losers are sure losers; should eliminate just enough
-            # that none can want more than resourcesWantedOfLeastNonLoser
+            # All in losers are sure losers; all but the last should be
+            # fully eliminated, and the last should eliminate just enough
+            # that it can't want more than resourcesWantedOfLeastNonLoser
             amounts = []
-            for l in losers:
-                amount = self.eliminatedAbove[R][l] - \
-                    (self.resourcesWanted[R][l] - self.surplus[R] - \
-                         (self.eliminableResourcesOfLosers - self.eliminableResources[R][l]) -\
-                         self.resourcesWantedOfLeastNonLoser)
-                amount = (amount / self.amountEpsilon) * self.amountEpsilon
-                if amount < self.minimum[l] or amount <= self.winAmount[R][l]:
-                    amount = self.winAmount[R][l]
-                amounts.append(amount)
+            lastLoser = losers[len(losers)-1]
+            allButLastEliminated = 0
+            for l in losers[:-1]:
+                amounts.append(self.winAmount[R][l])
+                allButLastEliminated += self.eliminableResources[R][l]
+
+            lastLoserAmount = self.eliminatedAbove[R][lastLoser] - \
+                              (self.resourcesWanted[R][lastLoser] - self.surplus[R] - \
+                               allButLastEliminated - self.resourcesWantedOfLeastNonLoser)
+            lastLoserAmount = (lastLoserAmount / self.amountEpsilon) * self.amountEpsilon
+            if lastLoserAmount < self.minimum[lastLoser] or lastLoserAmount <= self.winAmount[R][lastLoser]:
+                lastLoserAmount = self.winAmount[R][lastLoser]
+            else:
+                extraDesc = ", and partially %s(>%s)," % (self.b.names[lastLoser],self.displayAmountValue(lastLoserAmount))
+            amounts.append(lastLoserAmount)
 
         totalLosers = []
         winners = []
@@ -353,10 +356,11 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
 
         self.newWinners(winners)
         self.newLosers(totalLosers)
-        desc = "Count after eliminating %s and transferring votes. "\
-            % self.b.joinList(["%s(>%s)" % (self.b.names[c],\
-                                                 self.displayAmountValue(self.eliminatedAbove[self.R][c]))\
-                                    for c in losers], convert="none")
+        if len(totalLosers+winners) > 0 :
+            desc = "Count after eliminating %s%s and transferring votes. "\
+               % (self.b.joinList(["%s(>%s)" % (self.b.names[c],\
+                                                    self.displayAmountValue(self.eliminatedAbove[self.R][c]))\
+                                       for c in totalLosers+winners], convert="none"),  extraDesc)
         return desc
 
 ###
