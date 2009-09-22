@@ -2,54 +2,42 @@
 
 import os, random, time, timeit
 import ballots as ballots
-import STV as stv
+import STV
+from MethodPlugins.WarrenSTV import WarrenSTV
+from LoaderPlugins.BltBallotLoader import BltBallotLoader
 import sys
 import projectBallots
 import projectElection
 
-class WarrenSTVNoDefaultWinners(stv.WarrenSTV):
+class WarrenSTVNoDefaultWinners(WarrenSTV):
     """
     Changes electionOver to match MMV.
     """
 #     def allocateRound(self):
 #         print "STV Round " + str(self.R) + " " + str(time.clock())
 #         stv.WarrenSTV.allocateRound(self)
-    
+
+    def getLosers(self, ppp = None):
+        savedNumSeats = self.numSeats
+        self.numSeats = len(self.winners) + 1
+        losers = WarrenSTV.getLosers(self,ppp)
+        self.numSeats = savedNumSeats
+        return losers
+
     def electionOver(self):
         "Election is over when we know all the winners."
-        
+
         # Already recognized enough winners
-        if len(self.winners) == self.b.nSeats:
-            desc = "The election is over since all seats are filled. "
-            return (True, desc)
-        
+        if len(self.winners) == self.numSeats:
+            return True
+
         # Every candidate has either won or been eliminated
         if self.purgatory == []:
-            desc = "The election is over since all candidates have won or been eliminated"
-            return (True, desc)
+            return True
 
-        for c in self.purgatory[:]:
-            if self.count[self.R][c] < 0.9 * self.thresh[self.R]:
-                return (False, "")
-
-        # Every candidate remaining with >90%-quota votes is a winner.
-        if len(self.purgatory + self.winners) <= self.b.nSeats:
-            desc = "The election is over since the number of candidates remaining "\
-                   "is equal to the number of seats. "
-            winners = []
-            losers = []
-            for c in self.purgatory[:]:
-                if self.count[self.R][c] > 0:
-                    winners.append(c)
-                else:
-                    losers.append(c)
-            desc += self.newWinners(winners, "under")
-            self.newLosers(losers)
-            return (True, desc)
-                
         # Not done yet.
-        return (False, "")
- 
+        return False
+
 
 
 def print_timing(func):
@@ -71,11 +59,11 @@ class Test:
         self.diff = {}
         self.times = {}
         self.randomize = randomize
-    
+
     @print_timing
     def runSTV(self, file, b):
         e = WarrenSTVNoDefaultWinners(b)
-        e.setOptions(threshName=("Hare", "Static", "Fractional"))
+        e.threshName=("Hare", "Static", "Fractional")
         e.runElection()
         winS = "STV election winners: "
         for w in e.winners:
@@ -108,11 +96,10 @@ class Test:
             if cur < self.max and file[-4:].lower() == ".blt":
                 print "Processing file: %s..." % file
                 msg = ""
-                b = ballots.BltBallots()
-                b.load(self.path+file)
+                b = ballots.Ballots()
+                loader = BltBallotLoader()
+                loader.load(b,self.path+file)
                 s, sdelta =  self.runSTV(self.path + file,b)
-                b = projectBallots.ProjectBallots()
-                b.load(self.path+file)
                 m2, m2delta = self.runMMV2(self.path + file,b)
                 msg += "======================================\n"
                 msg += "Election file: %s\n" % file

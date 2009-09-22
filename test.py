@@ -6,7 +6,7 @@ b = Ballots()
 loader = BltpBallotLoader()
 loader.load(b,"ballot_files/case_x2.bltp")
 e = ProjectElection(b)
-e.countingMethod = "Meek"
+#e.countingMethod = "Meek"
 
 def run():
   e.runElection()
