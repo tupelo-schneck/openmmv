@@ -420,7 +420,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         for i, (c, bamount) in enumerate(itertools.izip(ballot,amounts)):
             if i >= start:
                 nextStart = i + 1
-            if c in self.purgatory + self.winners and prior[c] < self.eliminatedAbove[self.R][c]:
+            if c in self.purgatory + self.winners and prior[c] < self.eliminatedAbove[self.R][c] and bamount > 0:
                 if i >= start:
                     amount = bamount * self.p + prior[c]
                     amount = min(amount, self.eliminatedAbove[self.R][c])
