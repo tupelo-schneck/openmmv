@@ -110,7 +110,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         # For these, see allocateRound
         self.winAmount = []
         self.eliminatedAbove = []
-        self.resourcesWanted = []
+        self.fractionHad = []
         self.eliminableResources = []
         self.countDict = []
 
@@ -144,11 +144,11 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         else:
             self.winAmount.append(self.winAmount[self.R-1][:])
             self.eliminatedAbove.append(self.eliminatedAbove[self.R-1][:])
-        # resourcesWanted : round -> candidate -> how many more resources the candidate
-        #     needs to be funded at the highest level suggested for it so far
+        # fractionHad : round -> candidate -> what fraction the candidate has of
+        #     the resources needed to take it to its not-yet-eliminated
         # eliminableResources : round -> candidate -> how much would be obtained
         #     by completely eliminating the candidate
-        self.resourcesWanted.append([0] * self.b.numCandidates)
+        self.fractionHad.append([0] * self.b.numCandidates)
         self.eliminableResources.append([0] * self.b.numCandidates)
 
 ###
@@ -194,7 +194,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
 
     def updateWinners(self):
         """Called after updateCount to set winners and losers.
-        MMV adds winAmount, eliminatedAbove, resourcesWanted, and eliminableResources.
+        MMV adds winAmount, eliminatedAbove, and eliminableResources.
         """
         winners = []
         winnersAmounts = {}
@@ -207,16 +207,16 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                         self.winAmount[self.R][c] = amount
                         winnersAmounts[c] = amount
                     else:
-                        self.resourcesWanted[self.R][c] += amount - prior - self.countDict[self.R][c][amount]
                         self.eliminableResources[self.R][c] += self.countDict[self.R][c][amount]
                 else:
                     break
                 prior = amount
-            if prior == 0:
-                self.resourcesWanted[self.R][c] = self.minimum[c]
 
             if self.winAmount[self.R][c] == self.eliminatedAbove[self.R][c]:
                 winners.append(c)
+            else:
+                self.fractionHad[self.R][c] = self.eliminableResources[self.R][c] * self.p / (self.eliminatedAbove[self.R][c] - self.winAmount[self.R][c])
+
 
         self.newWinners(winners) # ignore returned string
         winners = winnersAmounts.keys()
@@ -259,7 +259,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
     def getLosers(self, ppp = None):
         """Called at start of each iteration, via RecursiveSTV.chooseCandidatesToEliminate.
         Returns sure losers.
-        MMV also sets resourcesWantedOfLeastNonLoser, in order to determine
+        MMV also sets fractionHadOfLeastNonLoser, in order to determine
         correct funding level at which to eliminate greatest loser.
         In MMV we eliminate first the projects which need the most resources;
         unlike OpenSTV this isn't the same as projects with the least count.
@@ -267,23 +267,22 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         """
         if ppp == None: ppp = self.purgatory
         R = self.R - 1
-        ppp.sort(key=lambda a: -self.resourcesWanted[R][a])
+        ppp.sort(key=lambda a: self.fractionHad[R][a])
         losers = []
 
         self.eliminableResourcesOfLosers = 0
         for i in xrange(len(ppp)):
             if len(ppp) > i+1:
-                self.resourcesWantedOfLeastNonLoser = self.resourcesWanted[R][ppp[i+1]]
+                self.fractionHadOfLeastNonLoser = self.fractionHad[R][ppp[i+1]]
             else:
-                self.resourcesWantedOfLeastNonLoser = 0 # TODO: make this some epsilon---in case we're willing to elect "close enough" projects
+                self.fractionHadOfLeastNonLoser = self.p # TODO: make this some epsilon---in case we're willing to elect "close enough" projects
             self.eliminableResourcesOfLosers += self.eliminableResources[R][ppp[i]]
             # For everything so far, if you gave all eliminable resources from all the others,
             # and all of the surplus, would it still want more than the next project?
             # If so you can eliminate all of them.
             theyLose = True
             for c in ppp[:i+1]:
-                if self.resourcesWanted[R][c] - (self.eliminableResourcesOfLosers - self.eliminableResources[R][c]) \
-                        - self.surplus[R] <= self.resourcesWantedOfLeastNonLoser:
+                if (self.eliminableResourcesOfLosers + self.surplus[R]) * self.p / (self.eliminatedAbove[R][c] - self.winAmount[R][c]) >= self.fractionHadOfLeastNonLoser:
                     theyLose = False
                     break
             if theyLose:
@@ -298,18 +297,15 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         We do this by looking at prior rounds to see which one was doing worse recently,
         if any.  If that doesn't work we call breakStrongTie and choose randomly.
         In order to reuse the OpenSTV code which looks at self.count, we maneuver
-        self.resourcesWanted into self.count and look for the biggest.
+        self.fractionHad into self.count and look for the biggest.
         """
         savedcount = self.count
-        self.count = self.resourcesWanted
-        fewestmost = "most"
-        if mostfewest == "most":
-            fewestmost = "fewest"
-        res = RecursiveSTV.breakWeakTie(self,R,cList,fewestmost,what)
+        self.count = self.fractionHad
+        res = RecursiveSTV.breakWeakTie(self,R,cList,mostfewest,what)
         self.count = savedcount
         # This is important, as res isn't a sure loser, so we should just eliminate
         # a little bit.
-        self.resourcesWantedOfLeastNonLoser = None
+        self.fractionHadOfLeastNonLoser = None
         return res
 
 ###
@@ -317,11 +313,11 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
     def eliminateLosers(self, losers):
         """Perform an elimination.
         We have to work a lot harder than OpenSTV in order to figure out and set the
-        eliminated funding levels.  The key is resourcesWantedOfLeastNonLoser.
+        eliminated funding levels.  The key is fractionHadOfLeastNonLoser.
         """
         R = self.R-1
         extraDesc = ""
-        if self.resourcesWantedOfLeastNonLoser == None:
+        if self.fractionHadOfLeastNonLoser == None:
             # We chose a loser, who wasn't a sure loser.  Just eliminate a little.
             assert(len(losers)==1)
             amounts = [self.eliminatedAbove[R][losers[0]] - self.amountEpsilon]
@@ -329,13 +325,10 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 amounts = [0]
         else:
             # All in losers are sure losers; should eliminate just enough
-            # that none can want more than resourcesWantedOfLeastNonLoser
+            # that none can want more than fractionHadOfLeastNonLoser
             amounts = []
             for l in losers:
-                amount = self.eliminatedAbove[R][l] - \
-                    (self.resourcesWanted[R][l] - self.surplus[R] - \
-                         (self.eliminableResourcesOfLosers - self.eliminableResources[R][l]) -\
-                         self.resourcesWantedOfLeastNonLoser)
+                amount = (self.eliminableResourcesOfLosers + self.surplus[R]) * self.p / self.fractionHadOfLeastNonLoser + self.winAmount[R][l]
                 amount = (amount / self.amountEpsilon) * self.amountEpsilon
                 if amount < self.minimum[l] or amount <= self.winAmount[R][l]:
                     amount = self.winAmount[R][l]
