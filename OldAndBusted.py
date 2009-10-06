@@ -74,13 +74,13 @@ class OldAndBusted(NonIterative,MethodPlugin):
                 if sofar >= self.b.numSeats: break
             if sofar < self.b.numSeats:
                 if not finished:
-                    exhaustedCount += 1
+                    exhaustedCount += self.p
                     exhaustedAmount += weight * (self.b.numSeats - sofar)
                 self.exhausted += weight * (self.b.numSeats - sofar)
 
         if exhaustedCount > 0:
-            self.msg += "%d ballots *intentionally* exhausted for a total of %d.\n" % \
-                        (exhaustedCount, exhaustedAmount)
+            self.msg += "%s ballots *intentionally* exhausted for a total of %s.\n" % \
+                        (self.displayValue(exhaustedCount), self.displayValue(exhaustedAmount))
 
         useable = self.p * self.b.numSeats
         candsWithCounts = [ (count, cand) for (cand, count) in enumerate(self.count) ]
@@ -90,22 +90,26 @@ class OldAndBusted(NonIterative,MethodPlugin):
         index = 0
         self.winners = []
         done = False
+        usedExhausted = False
         while index < len(sortedCands) and not done:
             tiedCands = [sortedCands[index]]
-            index += 1
-            while index < len(sortedCands) and \
-                      self.count[sortedCands[index]]==self.count[sortedCands[index-1]]:
-                tiedCands.append(sortedCands[index])
+            if usedExhausted or exhaustedCount <= self.count[tiedCands[0]]:
                 index += 1
-            thisAmount = sum(self.p * self.amount[c] / self.count[c] for c in tiedCands)
-            if exhaustedCount==self.count[tiedCands[0]]:
-                thisAmount += self.exhausted
+                while index < len(sortedCands) and \
+                        self.count[sortedCands[index]]==self.count[sortedCands[index-1]]:
+                    tiedCands.append(sortedCands[index])
+                    index += 1
+                thisAmount = sum(self.p * self.amount[c] / self.count[c] for c in tiedCands)
+                if exhaustedCount==self.count[tiedCands[0]]:
+                    usedExhausted = True
+                    thisAmount += exhaustedAmount
+            else:
+                tiedCands = []
+                usedExhausted = True
+                thisAmount = exhaustedAmount
             multiplier = self.p
             if thisAmount > useable:
                 multiplier = self.p * useable / thisAmount
-                print useable
-                print thisAmount
-                print multiplier
                 done = True
             for c in tiedCands:
                 self.winners.append(c)
@@ -116,13 +120,12 @@ class OldAndBusted(NonIterative,MethodPlugin):
                             self.displayValue(winningAmount),\
                             (" (truncated from %s)" % self.displayValue(fullAmount)) \
                                                                 if done else "")
-            if exhaustedCount==self.count[tiedCands[0]]:
-                fullAmount = self.p * self.exhausted / exhaustedCount
-                winningAmount = multiplier * self.exhausted / exhaustedCount
+            if len(tiedCands)==0 or exhaustedCount==self.count[tiedCands[0]]:
+                fullAmount = self.p * exhaustedAmount / exhaustedCount
+                winningAmount = multiplier * exhaustedAmount / exhaustedCount
                 useable -= winningAmount
-                winningAmount /= self.p
-                self.msg += "Exhaustion removes %s%s.\n" % (self.b.names[c], \
+                self.msg += "Exhaustion removes %s%s.\n" % ( \
                             self.displayValue(winningAmount),\
                             (" (truncated from %s)" % self.displayValue(fullAmount)) \
                                                                 if done else "")
-                
+
