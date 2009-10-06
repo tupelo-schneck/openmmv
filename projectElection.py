@@ -113,6 +113,11 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         self.fractionHad = []
         self.eliminableResources = []
         self.countDict = []
+        losers = []
+        for c in self.purgatory:
+            if self.maximum[c] == 0:
+                losers.append(c)
+        self.newLosers(losers)
 
 ###
 
@@ -204,8 +209,9 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             for amount in sorted(self.countDict[self.R][c].keys()):
                 if amount <= self.eliminatedAbove[self.R][c]:
                     if self.countDict[self.R][c][amount] >= amount - prior:
-                        self.winAmount[self.R][c] = amount
-                        winnersAmounts[c] = amount
+                        if amount > self.winAmount[self.R][c]:
+                            self.winAmount[self.R][c] = amount
+                            winnersAmounts[c] = amount
                     else:
                         self.eliminableResources[self.R][c] += self.countDict[self.R][c][amount]
                 else:
@@ -216,6 +222,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 winners.append(c)
             else:
                 self.fractionHad[self.R][c] = self.eliminableResources[self.R][c] * self.p / (self.eliminatedAbove[self.R][c] - self.winAmount[self.R][c])
+#                print "%s: %s: %s/(%s-%s)=%s" % (self.R,self.b.names[c],self.displayValue(self.eliminableResources[self.R][c]),self.displayValue(self.eliminatedAbove[self.R][c]),self.displayValue(self.winAmount[self.R][c]),self.displayValue(self.fractionHad[self.R][c]))
 
 
         self.newWinners(winners) # ignore returned string
@@ -350,6 +357,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             % self.b.joinList(["%s(>%s)" % (self.b.names[c],\
                                                  self.displayAmountValue(self.eliminatedAbove[self.R][c]))\
                                     for c in losers], convert="none")
+#        print desc
         return desc
 
 ###
@@ -370,11 +378,8 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
     def updateKeepValues(self):
         """Called in a non-eliminating round."""
 
-        if self.winners != []:
-            desc = "Keep values of candidates who have exceeded the threshold: "
-            list = []
-        else:
-            desc = ""
+        desc = "Keep values of candidates who have exceeded the threshold: "
+        list = []
 
         for c in self.purgatory + self.winners:
             prior = 0
@@ -396,7 +401,8 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         if list != []:
             desc += self.b.joinList(list, convert="none") + ". "
         else:
-            desc += "None (shouldn't happen?) "
+#            desc += "None (shouldn't happen?) "
+            desc = ""
         return desc
 
 ###
@@ -611,3 +617,31 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         return desc
 
 ###
+  # need to remove asserion
+    def newWinners(self, winners, status="over"):
+        "Perform basic accounting when a new winner is found."
+        
+        if len(winners) == 0: return ""
+    
+        winners.sort()
+        for c in winners:
+            #      assert(self.count[self.R][c] > 0)
+            self.purgatory.remove(c)
+            self.winnersOver.append(c)
+            self.wonAtRound[c] = self.R
+            self.winners = self.winnersOver + self.winnersEven
+    
+        if len(winners) == 1 and status == "over":
+            desc = "Candidate %s has reached the threshold and is elected. "\
+                % self.b.joinList(winners)
+        elif len(winners) == 1 and status == "under":
+            desc = "Candidate %s is elected. " % self.b.joinList(winners)
+        elif status == "over":
+            desc = "Candidates %s have reached the threshold and are elected. "\
+                % self.b.joinList(winners)
+        elif status == "under":
+            desc = "Candidates %s are elected. " % self.b.joinList(winners)
+        elif status == "none":
+            desc = ""
+            
+        return desc
