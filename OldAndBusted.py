@@ -55,6 +55,7 @@ class OldAndBusted(NonIterative,MethodPlugin):
             finished = False
             candsSeen = []
             for c,a in itertools.izip(cands,amts):
+                if a==0: continue
                 seen = c in candsSeen
                 if not seen: candsSeen.append(c)
                 if sofar + a <= self.b.numSeats:
