@@ -537,7 +537,11 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 contrib = {}
                 contribTot = 0
                 prior = bprior
-                for amount in sorted(self.countDict[self.R][c].keys()):
+                # ouch
+                keys = self.countDict[self.R][c].keys()
+                for k in self.f[self.R][c].keys():
+                    if k not in keys: keys.append(k)
+                for amount in sorted(keys):
                     if amount <= bprior:
                         continue
                     if amount > bamount:
@@ -577,7 +581,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                             # round up the Meek calculation
                             newamount, r = divmod(newamount * rrr, self.share)
                             if r > 0: newamount += 1
-                    self.countDict[self.R][c][amount] += tree[key]["n"] * newamount
+                    self.countDict[self.R][c][amount] = self.countDict[self.R][c].get(amount,0) + tree[key]["n"] * newamount
                     self.count[self.R][c] += tree[key]["n"] * newamount
                     rrr -= newamount
                     prior = amount
@@ -585,7 +589,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                     # we rounded down new fixed contributions... but we had something left over
                     # give it to the lowest contribution level
                     amount = sorted(contrib.keys())[0]
-                    self.countDict[self.R][c][amount] += tree[key]["n"] * rrr
+                    self.countDict[self.R][c][amount]  = self.countDict[self.R][c].get(amount,0) + tree[key]["n"] * rrr
                     self.count[self.R][c] += tree[key]["n"] * rrr
                     rrr = 0
 

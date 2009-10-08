@@ -5,7 +5,7 @@ from report import TextReport
 b = Ballots()
 loader = BltpBallotLoader()
 loader.load(b,"ballot_files/otra2009/2009final.bltp")
-b.numSeats += 000
+b.numSeats += 0 #320
 origmax = b.maximum[:]
 for i in [42,9,29,7,26,40,43,35,27,36,38,39]:
     b.maximum[i-1] = 0
@@ -15,26 +15,25 @@ b.maximum[13-1]=200
 b.maximum[25-1]=80
 b.maximum[28-1]=60
 b.maximum[32-1]=100
-b.maximum[6-1]=150
-b.maximum[10-1]=0
+b.maximum[6-1]=0 #150
+b.maximum[10-1]=100   # b.minimum[10-1]+40
 b.maximum[41-1]=20
 b.maximum[33-1]=0
 b.maximum[17-1]=70
-b.maximum[14-1]=200
+b.maximum[14-1]=200  #*** 211
 b.maximum[31-1]=0
-b.maximum[21-1]=191 #*** 232
-b.maximum[24-1]=70
+b.maximum[21-1]=152 # 150
+b.maximum[24-1]=64
 b.maximum[12-1]=20
 b.maximum[20-1]=0
 b.maximum[19-1]=200
-b.maximum[15-1]=60
-b.maximum[23-1]=0 #***
+b.maximum[15-1]=0    # 60, 0 !!!
+b.maximum[23-1]=0  # 275
+b.maximum[22-1]=61
 b.maximum[16-1]=100
-b.maximum[37-1]=1350 #*** 1397
-for i in [14-1,16-1,21-1,37-1]:
-    if b.maximum[i] > 0:
-        b.maximum[i] += 0
-        if b.maximum[i] > origmax[i]: b.maximum[i] = origmax[i]
+b.maximum[37-1]=1500 #*** 1568
+for i in [42,9,29,7,26,40,43,35,27,36,38,39]:
+    b.maximum[i-1] = 0
 e = ProjectElection(b)
 #e.countingMethod = "Meek"
 
@@ -42,11 +41,19 @@ def run():
     e.runElection()
     e.R += 1
     e.allocateRound()
+    e.msg[e.R] += "Count after transferring surplus votes. "
     e.updateTree(e.tree)
-    e.updateKeepValues()
+    e.msg[e.R] += e.updateKeepValues()
     e.updateCount()
-    e.updateWinners()
+    e.msg[e.R] += e.updateWinners()
     e.nRounds += 1
+    checkLosers()
+    
+def checkLosers():
+    for c in range(e.b.numCandidates):
+      if e.winAmount[e.R-1][c] < e.maximum[c]:
+        print "%s: %s" % (e.b.names[c],e.displayValue(e.winAmount[e.R-1][c]))
+
 
 def prin():
     r = TextReport(e)
@@ -117,3 +124,12 @@ def showBallots():
         print "Hours: %d" % sum(amts)
         showBallot(f,cands,amts)
         print 
+
+
+def showWinners():
+    f = e.f[e.R]
+    for c in e.winners:
+        print "%s: %s hours" % (e.b.names[c], e.displayAmountValue(e.winAmount[e.R][c]))
+        for amount in sorted(f[c].keys()):
+            print "          %s hrs: %s players" % (e.displayAmountValue(amount),str(round(e.p*1.0/f[c][amount],1)))
+        
