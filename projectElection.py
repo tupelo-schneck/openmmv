@@ -156,6 +156,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         self.fractionHad.append([0] * self.b.numCandidates)
         self.eliminableResources.append([0] * self.b.numCandidates)
 
+
 ###
 
     def initializeTreeAndKeepValues(self):
@@ -171,13 +172,16 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
     def updateCount(self):
         """Called at end of each iteration to set count, exhausted, thresh, surplus."""
 
-        # maxKeep: temporary round-to-round track of largest fraction of amount
-        # actually given by any supporter.  This may be less than the calculated fraction f,
-        # in which case we can take a (sometimes massive) shortcut and truncate f to this.
-        self.maxKeep = [0] * self.b.numCandidates
-        for c in xrange(self.b.numCandidates):
-            self.maxKeep[c] = {}
         self.treeCount(self.tree, self.share)
+
+        for c in self.winners + self.purgatory:
+            prior = 0
+            for amt in sorted(self.countDict[self.R][c].keys()):
+                if amt > self.winAmount[self.R][c]:
+                    continue
+                if self.countDict[self.R][c][amt] + 100 < amt - prior:
+                    print "WARNING: self.countDict[%d][%d][%d] too low for winner" % (self.R, c, amt)
+                prior = amt
 
         # compute thresh and surplus
         # Note: MMV doesn't actually use exhausted or thresh.
@@ -208,12 +212,13 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             prior = 0
             for amount in sorted(self.countDict[self.R][c].keys()):
                 if amount <= self.eliminatedAbove[self.R][c]:
-                    if self.countDict[self.R][c][amount] >= amount - prior:
-                        if amount > self.winAmount[self.R][c]:
+                    if amount > self.winAmount[self.R][c]:
+                        if self.countDict[self.R][c][amount] >= amount - prior:
                             self.winAmount[self.R][c] = amount
+                            print "New winner: %d %d %d" % (self.R, c, amount)
                             winnersAmounts[c] = amount
-                    else:
-                        self.eliminableResources[self.R][c] += self.countDict[self.R][c][amount]
+                        else:
+                            self.eliminableResources[self.R][c] += self.countDict[self.R][c][amount]
                 else:
                     break
                 prior = amount
@@ -345,6 +350,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         winners = []
         for c, amount in itertools.izip(losers,amounts):
             self.eliminatedAbove[self.R][c] = amount
+            if self.R > 10000: print "Eliminated %d %d %d" % (self.R, c, amount)
             if self.winAmount[self.R][c] == self.eliminatedAbove[self.R][c]:
                 if self.winAmount[self.R][c] == 0:
                     totalLosers.append(c)
@@ -366,11 +372,6 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         """Called after an elimination."""
         for c in self.purgatory + self.winners:
             self.f[self.R][c] = self.f[self.R-1][c].copy()
-            for amount in self.maxKeep[c].keys():
-                if amount > self.winAmount[self.R-1][c]:
-                    continue
-                if self.f[self.R][c].get(amount,self.supportLimit) > self.maxKeep[c][amount]:
-                    self.f[self.R][c][amount] = self.maxKeep[c][amount]
             # only keys for winners, so no need to look at eliminateds
 
 ###
@@ -381,19 +382,19 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         desc = "Keep values of candidates who have exceeded the threshold: "
         list = []
 
-        for c in self.purgatory + self.winners:
+        for c in sorted(self.purgatory + self.winners):
             prior = 0
             for amount in sorted(self.countDict[self.R-1][c].keys()):
                 if amount > self.winAmount[self.R-1][c]:
                     break
                 oldf = self.f[self.R-1][c].get(amount,self.supportLimit)
-                if oldf > self.maxKeep[c].get(amount,self.p):
-                    oldf = self.maxKeep[c][amount]
                 # round up calculation of new f
                 f, r = divmod(oldf * (amount - prior),
                       self.countDict[self.R-1][c][amount])
                 if r > 0: f += 1
                 self.f[self.R][c][amount] = f
+                if self.f[self.R][c][amount] > oldf+10:
+                    print "WARNING: f[%d][%d][%d] increased" % (self.R, c, amount)
                 prior = amount
                 list.append("%s(%s), %s" % (self.b.names[c], self.displayAmountValue(amount),
                                   self.displayValue(f)))
@@ -565,17 +566,9 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 prior = bprior
                 for amount in sorted(contrib.keys()):
                     if overContrib:
-                        # calculate maxKeep... round up
-                        if amount <= self.winAmount[self.R][c]:
-                            f = (shouldContrib+1) * contrib[amount] / (amount - prior) + 1
-                            if f > self.p: f = self.p
-                            if f > self.maxKeep[c].get(amount,0):
-                                self.maxKeep[c][amount] = f
                         # calculate new contribution... round down, but see below
                         newamount = shouldContrib * contrib[amount] / self.p
                     else:
-                        if amount <= self.winAmount[self.R][c]:
-                            self.maxKeep[c][amount] = self.p
                         newamount = contrib[amount]
                         if self.meek:
                             # round up the Meek calculation
@@ -649,3 +642,30 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             desc = ""
             
         return desc
+
+    ### MMV needs to check being equal to two round before
+    def chooseCandidatesToEliminate(self):
+        "Eliminate any losing candidates."
+
+        desc = ""
+
+        losers = self.getLosers()
+        if self.surplus[self.R-1] < self.surplusLimit and losers == []:
+          (c, desc) = self.breakWeakTie(self.R-1, self.purgatory, "fewest",
+                                        "candidates to eliminate")
+          losers = [c]
+
+        # Special case to prevent infinite loops caused by fixed precision
+        if (losers == [] and
+            self.R > 1 and
+            ((self.count[self.R-1] == self.count[self.R-2] and
+              self.f[self.R-1] == self.f[self.R-2]) or
+             (self.count[self.R-1] == self.count[self.R-3] and
+              self.f[self.R-1] == self.f[self.R-3]))):
+          desc = "Candidates tied within precision of computations. "
+          (c, desc2) = self.breakWeakTie(self.R-1, self.purgatory, "fewest",
+                                         "candidates to eliminate")
+          losers = [c]
+          desc += desc2
+
+        return losers, desc
