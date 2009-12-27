@@ -113,6 +113,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         self.fractionHad = []
         self.eliminableResources = []
         self.countDict = []
+        self.maxKeep = []
         losers = []
         for c in self.purgatory:
             if self.maximum[c] == 0:
@@ -138,9 +139,11 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         # f (factor) : round -> candidate -> amount -> fraction of the amount
         #     to be given by each supporter 
         self.countDict.append([0] * self.b.numCandidates)
+        self.maxKeep.append([0] * self.b.numCandidates)
         for c in xrange(self.b.numCandidates):
             self.countDict[self.R][c] = {}
             self.f[self.R][c] = {}
+            self.maxKeep[self.R][c] = {}
         # winAmount : round -> candidate -> what amount has already won
         # eliminatedAbove : round -> candidate -> highest amount not eliminated
         if self.R == 0:
@@ -388,6 +391,8 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 if amount > self.winAmount[self.R-1][c]:
                     break
                 oldf = self.f[self.R-1][c].get(amount,self.supportLimit)
+                if oldf > self.maxKeep[self.R-1][c].get(amount,self.p):
+                    oldf = self.maxKeep[self.R-1][c][amount]
                 # round up calculation of new f
                 f, r = divmod(oldf * (amount - prior),
                       self.countDict[self.R-1][c][amount])
@@ -538,7 +543,6 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 contrib = {}
                 contribTot = 0
                 prior = bprior
-                # ouch
                 keys = self.countDict[self.R][c].keys()
                 for k in self.f[self.R][c].keys():
                     if k not in keys: keys.append(k)
@@ -563,6 +567,31 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                     overContrib = contribTot > rrr
                 if overContrib:
                     shouldContrib = rrr * self.p / contribTot
+
+                # calculate maxKeep
+                # just an optimization (sometimes important, e.g. for running normal candidate elections)
+                # but it only works if every funding level is a winner!
+                # TODO: we could probably still do *something* when there are higher levels...
+                # we just need to account for them.  Basically they cause us to reduce yet further, due
+                # to the overContrib effect.  So we need to plan that into our number...
+                if self.eliminatedAbove[self.R][c] == self.winAmount[self.R][c]:
+                    if not bamount in self.maxKeep[self.R][c]:
+                        for maxKeepKey in sorted(self.maxKeep[self.R][c].keys()):
+                            if maxKeepKey > bamount:
+                                self.maxKeep[self.R][c][bamount] = self.maxKeep[self.R][c][maxKeepKey]
+                    prior = bprior
+                    for amount in sorted(contrib.keys()):
+                        if overContrib:
+                            # contrib[amount] = f * (amount - prior) / self.p
+                            # so correct_f = correct_contrib * self.p / (amount - prior)
+                            thisMaxKeep = (shouldContrib + 1) * contrib[amount] / (amount - prior) + 1
+                            prevMaxKeep = self.maxKeep[self.R][c].get(amount,0)
+                            if thisMaxKeep > prevMaxKeep:
+                                self.maxKeep[self.R][c][amount] = thisMaxKeep
+                        else:
+                            self.maxKeep[self.R][c][amount] = self.p
+                        prior = amount
+
                 prior = bprior
                 for amount in sorted(contrib.keys()):
                     if overContrib:
