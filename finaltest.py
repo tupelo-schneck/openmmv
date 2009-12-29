@@ -8,56 +8,49 @@ loader.load(b,"ballot_files/otra2009/2009final.bltp")
 b.numSeats += 0#320
 origmax = b.maximum[:]
 if False:
-    for i in range(len(b.maximum)):
-        b.maximum[i] = b.minimum[i]
-if True:
     for i in [1,2,3,4,5,7,9,26,27,29,30,35,36,38,39,40,42,43]:
         b.maximum[i-1] = 0
 if False:
     b.maximum[6-1]=150
     b.maximum[8-1]=200
-    b.maximum[10-1]=origmax[10-1]
+    b.maximum[10-1]=100
     b.maximum[11-1]=250
     b.maximum[12-1]=20
     b.maximum[13-1]=200
     b.maximum[14-1]=200
     b.maximum[16-1]=100
-    b.maximum[17-1]=70
+    b.maximum[17-1]=68
     b.maximum[18-1]=200
     b.maximum[19-1]=200
-    b.maximum[21-1]=142
-    b.maximum[22-1]=71
+    b.maximum[21-1]=50
+    b.maximum[22-1]=70
     b.maximum[25-1]=80
     b.maximum[28-1]=60
     b.maximum[32-1]=100
     b.maximum[34-1]=125
     b.maximum[37-1]=1500
 if False:
-    b.maximum[11-1]=250
-    b.maximum[18-1]=200
-    b.maximum[13-1]=200
-    b.maximum[25-1]=80
-    b.maximum[28-1]=60
-    b.maximum[32-1]=100
-    b.maximum[6-1]=0 #150
-    b.maximum[10-1]=100   # b.minimum[10-1]+40
-    b.maximum[41-1]=20
-    b.maximum[33-1]=0
-    b.maximum[17-1]=70
-    b.maximum[14-1]=200  #*** 211
-    b.maximum[31-1]=0
-    b.maximum[21-1]=152 # 150
-    b.maximum[24-1]=64
-    b.maximum[12-1]=20
+    b.maximum[15-1]=0
     b.maximum[20-1]=0
-    b.maximum[19-1]=200
-    b.maximum[15-1]=0    # 60, 0 !!!
-    b.maximum[23-1]=0  # 275
-    b.maximum[22-1]=61
-    b.maximum[16-1]=100
-    b.maximum[37-1]=1500 #*** 1568
-    for i in [42,9,29,7,26,40,43,35,27,36,38,39]:
-        b.maximum[i-1] = 0
+    b.maximum[23-1]=0
+    b.maximum[24-1]=0
+    b.maximum[31-1]=0
+    b.maximum[33-1]=0
+    b.maximum[41-1]=0
+#    b.maximum[23-1]=b.minimum[23-1]
+#    b.maximum[24-1]=b.minimum[24-1]
+#    b.maximum[41-1]=b.minimum[41-1]
+if False:
+    b.maximum[6-1] = 113
+    b.minimum[6-1] = 113
+if False:
+    for i in range(len(b.maximum)):
+        if i in  [1,2,3,4,5,7,9,26,27,29,30,35,36,38,39,40,42,43]:
+            continue
+        b.maximum[i-1] = b.maximum[i-1] * 11 / 10
+for i in range(len(b.maximum)):
+    if b.maximum[i-1] > origmax[i-1]:
+        b.maximum[i-1] = origmax[i-1]
 e = ProjectElection(b)
 #e.countingMethod = "Meek"
 
@@ -75,6 +68,8 @@ def run():
 
 def checkLosers(printAll):
     for c in range(e.b.numCandidates):
+      if c+1 in [1,2,3,4,5,7,9,26,27,29,30,35,36,38,39,40,42,43]:
+          continue
       if printAll or e.winAmount[e.R-1][c] < e.maximum[c]:
         print "%s: %s" % (e.b.names[c],e.displayValue(e.winAmount[e.R-1][c]))
 

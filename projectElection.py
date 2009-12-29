@@ -137,13 +137,12 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         # countDict : round -> candidate -> amount -> support
         #     it shows how much of that part of the amount is supported
         # f (factor) : round -> candidate -> amount -> fraction of the amount
-        #     to be given by each supporter 
+        #     to be given by each supporter
         self.countDict.append([0] * self.b.numCandidates)
         self.maxKeep.append([0] * self.b.numCandidates)
         for c in xrange(self.b.numCandidates):
             self.countDict[self.R][c] = {}
             self.f[self.R][c] = {}
-            self.maxKeep[self.R][c] = {}
         # winAmount : round -> candidate -> what amount has already won
         # eliminatedAbove : round -> candidate -> highest amount not eliminated
         if self.R == 0:
@@ -391,8 +390,9 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 if amount > self.winAmount[self.R-1][c]:
                     break
                 oldf = self.f[self.R-1][c].get(amount,self.supportLimit)
-                if oldf > self.maxKeep[self.R-1][c].get(amount,self.p):
-                    oldf = self.maxKeep[self.R-1][c][amount]
+                thisMaxKeep = self.maxKeep[self.R-1][c]
+                if thisMaxKeep > 0 and oldf > thisMaxKeep:
+                    oldf = thisMaxKeep
                 # round up calculation of new f
                 f, r = divmod(oldf * (amount - prior),
                       self.countDict[self.R-1][c][amount])
@@ -571,25 +571,18 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                 # calculate maxKeep
                 # just an optimization (sometimes important, e.g. for running normal candidate elections)
                 # but it only works if every funding level is a winner!
-                # TODO: we could probably still do *something* when there are higher levels...
-                # we just need to account for them.  Basically they cause us to reduce yet further, due
-                # to the overContrib effect.  So we need to plan that into our number...
                 if self.eliminatedAbove[self.R][c] == self.winAmount[self.R][c]:
-                    if not bamount in self.maxKeep[self.R][c]:
-                        for maxKeepKey in sorted(self.maxKeep[self.R][c].keys()):
-                            if maxKeepKey > bamount:
-                                self.maxKeep[self.R][c][bamount] = self.maxKeep[self.R][c][maxKeepKey]
                     prior = bprior
                     for amount in sorted(contrib.keys()):
                         if overContrib:
                             # contrib[amount] = f * (amount - prior) / self.p
                             # so correct_f = correct_contrib * self.p / (amount - prior)
                             thisMaxKeep = (shouldContrib + 1) * contrib[amount] / (amount - prior) + 1
-                            prevMaxKeep = self.maxKeep[self.R][c].get(amount,0)
+                            prevMaxKeep = self.maxKeep[self.R][c]
                             if thisMaxKeep > prevMaxKeep:
-                                self.maxKeep[self.R][c][amount] = thisMaxKeep
+                                self.maxKeep[self.R][c] = thisMaxKeep
                         else:
-                            self.maxKeep[self.R][c][amount] = self.p
+                            self.maxKeep[self.R][c] = self.p
                         prior = amount
 
                 prior = bprior
@@ -607,6 +600,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                     self.count[self.R][c] += tree[key]["n"] * newamount
                     rrr -= newamount
                     prior = amount
+
                 if overContrib and rrr > 0:
                     # we rounded down new fixed contributions... but we had something left over
                     # give it to the lowest contribution level
@@ -646,9 +640,9 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
   # need to remove asserion
     def newWinners(self, winners, status="over"):
         "Perform basic accounting when a new winner is found."
-        
+
         if len(winners) == 0: return ""
-    
+
         winners.sort()
         for c in winners:
             #      assert(self.count[self.R][c] > 0)
@@ -656,7 +650,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             self.winnersOver.append(c)
             self.wonAtRound[c] = self.R
             self.winners = self.winnersOver + self.winnersEven
-    
+
         if len(winners) == 1 and status == "over":
             desc = "Candidate %s has reached the threshold and is elected. "\
                 % self.b.joinList(winners)
@@ -669,7 +663,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             desc = "Candidates %s are elected. " % self.b.joinList(winners)
         elif status == "none":
             desc = ""
-            
+
         return desc
 
     ### MMV needs to check being equal to two round before
