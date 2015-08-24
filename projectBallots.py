@@ -278,7 +278,7 @@ class ProjectBallots(Ballots):
         # First, candidate must not be withdrawn.
         # Second, candidate must not already be on the ballot when removeDupes
         # is true.
-        if not ( (c in withdrawn) or (removeDupes and c2 in b2) ):
+        if not ( (c in withdrawn) or (False and removeDupes and c2 in b2) ):
           b2.append(c2)
           a2.append(a)
       if not removeEmpty or len(b2) > 0:

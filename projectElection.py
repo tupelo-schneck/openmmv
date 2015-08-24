@@ -44,6 +44,11 @@ class ProjectElection(RecursiveSTV,MethodPlugin):
             projectBallots.upgradeBallot(b)
         self.countingMethod = "Warren"
         self.createUIoptions(["countingMethod","prec"])
+        self.evil = False
+
+        self.DEBUG_COUNT = False
+        self.indent = 0
+        self.DEBUG_WIN_LOSE = True
 
 ###
 
@@ -173,7 +178,9 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
 
     def updateCount(self):
         """Called at end of each iteration to set count, exhausted, thresh, surplus."""
-
+        if self.DEBUG_COUNT:
+            print "count"
+            self.indent = 4
         self.treeCount(self.tree, self.share)
 
         for c in self.winners + self.purgatory:
@@ -217,7 +224,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
                     if amount > self.winAmount[self.R][c]:
                         if self.countDict[self.R][c][amount] >= amount - prior:
                             self.winAmount[self.R][c] = amount
-                            print "New winner: %d %d %d" % (self.R, c, amount)
+                            if self.DEBUG_WIN_LOSE: print "New winner: %d %s %s" % (self.R, self.b.names[c], self.displayValue(amount))
                             winnersAmounts[c] = amount
                         else:
                             self.eliminableResources[self.R][c] += self.countDict[self.R][c][amount]
@@ -251,6 +258,13 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
     def electionOver(self):
         """Called before each iteration."""
 
+        if len(self.purgatory) <= 0 and (self.surplus[self.R]<100000 or self.evil):
+            desc = "The election is over since all projects have won or been eliminated.  "
+            self.msg[self.R] += desc
+            return True
+
+        return False
+
         if len(self.purgatory) <= 0:
             desc = "The election is over since all projects have won or been eliminated.  "
             self.msg[self.R] += desc
@@ -266,7 +280,7 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             return True
 
         # Not done yet.
-        return False
+        return False #self.R > 11000
 
 ###
 
@@ -351,8 +365,9 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
         totalLosers = []
         winners = []
         for c, amount in itertools.izip(losers,amounts):
+            if self.DEBUG_WIN_LOSE: print "New loser: %d %s >%s" % (self.R, self.b.names[c], self.displayValue(amount))
             self.eliminatedAbove[self.R][c] = amount
-            if self.R > 10000: print "Eliminated %d %d %d" % (self.R, c, amount)
+#            if self.R > 10000: print "Eliminated %d %d %d" % (self.R, c, amount)
             if self.winAmount[self.R][c] == self.eliminatedAbove[self.R][c]:
                 if self.winAmount[self.R][c] == 0:
                     totalLosers.append(c)
@@ -499,7 +514,6 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             del treeToMerge[key]
 
 ###
-
     def treeCount(self, tree, remainder):
         """Called from updateCount to traverse the ballot tree.  Recursive."""
         for bi, i in itertools.izip(tree["bi"],tree["i"]):
@@ -514,6 +528,13 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             if key == "bi": continue
 
             c, bamount, bprior = key
+            if self.DEBUG_COUNT:
+#                if self.R > 1: sys.exit(1)
+                print "%scount %d %s" % (" " * self.indent, tree[key]["n"], self.displayValue(remainder))
+                print "%s    %s %s" % (" " * self.indent, self.b.names[c], self.displayValue(bamount))
+#                                    System.out.println("count " + weight + " " + remainder);
+                self.indent += 4
+
             if bamount > self.eliminatedAbove[self.R][c]: bamount = self.eliminatedAbove[self.R][c]
             rrr = remainder
             if bamount >= self.minimum[c] and bamount > bprior: # not fully eliminated
@@ -612,6 +633,8 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
             # If ballot not used up and more candidates, keep going
             if rrr > 0:
                 self.treeCount(tree[key], rrr)
+            if self.DEBUG_COUNT:
+                self.indent -= 4
 
 ###
 
@@ -674,21 +697,25 @@ control.SetStringSelection("%s")""" % (self.countingMethod),
 
         losers = self.getLosers()
         if self.surplus[self.R-1] < self.surplusLimit and losers == []:
-          (c, desc) = self.breakWeakTie(self.R-1, self.purgatory, "fewest",
+          (c, desc2) = self.breakWeakTie(self.R-1, self.purgatory, "fewest",
                                         "candidates to eliminate")
+          desc = "Eliminating due to low surplus. " + desc2
           losers = [c]
 
         # Special case to prevent infinite loops caused by fixed precision
-        if (losers == [] and
-            self.R > 1 and
-            ((self.count[self.R-1] == self.count[self.R-2] and
-              self.f[self.R-1] == self.f[self.R-2]) or
-             (self.count[self.R-1] == self.count[self.R-3] and
-              self.f[self.R-1] == self.f[self.R-3]))):
-          desc = "Candidates tied within precision of computations. "
-          (c, desc2) = self.breakWeakTie(self.R-1, self.purgatory, "fewest",
+        if losers == [] and self.R > 1:
+          for i in range(min(5,self.R-3)):
+             if(self.countDict[self.R-1] == self.countDict[self.R-2-i] and
+              self.f[self.R-1] == self.f[self.R-2-i] and
+              self.eliminatedAbove[self.R-1] == self.eliminatedAbove[self.R-2-i]):
+               if(self.purgatory==[]):
+                   self.evil = True
+                   break
+               desc = "Choosing candidate to eliminate to avoid infinite loop. "
+               (c, desc2) = self.breakWeakTie(self.R-1, self.purgatory, "fewest",
                                          "candidates to eliminate")
-          losers = [c]
-          desc += desc2
+               losers = [c]
+               desc += desc2
+               break
 
         return losers, desc
