@@ -1,0 +1,1 @@
+Beginning stages of a project to create a GUI for allocating funds by Movable Money Voting.
